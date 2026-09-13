@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>ReleaseRadar</AssemblyName>
+    <RootNamespace>SoundCloudReleaseTracker</RootNamespace>
+    <Version>7.0.0</Version>
+    <Authors>Release Radar</Authors>
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <PublishSingleFile>false</PublishSingleFile>
+    <DebugType>None</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../native/Models.cs" Link="Core/Models.cs" />
+    <Compile Include="../native/AppConfig.cs" Link="Core/AppConfig.cs" />
+    <Compile Include="../native/CredentialStore.cs" Link="Core/CredentialStore.cs" />
+    <Compile Include="../native/TrackStore.cs" Link="Core/TrackStore.cs" />
+    <Compile Include="../native/MciPlayer.cs" Link="Core/MciPlayer.cs" />
+    <Compile Include="../native/SoundCloudApiClient.cs" Link="Core/SoundCloudApiClient.cs" />
+    <Compile Include="../native/SoundCloudAutoSetup.cs" Link="Core/SoundCloudAutoSetup.cs" />
+  </ItemGroup>
+</Project>
