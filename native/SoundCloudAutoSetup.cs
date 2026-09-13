@@ -38,7 +38,7 @@ internal static class SoundCloudAutoSetup
         var scriptPath = Path.Combine(toolsDir, "sc-api-auth.mjs");
         await File.WriteAllBytesAsync(scriptPath, scriptBytes, ct);
 
-        status?.Invoke("Открываю официальный вход SoundCloud в браузере…");
+        status?.Invoke("Открываю официальную страницу активации SoundCloud…");
 
         var psi = new ProcessStartInfo
         {
@@ -49,6 +49,7 @@ internal static class SoundCloudAutoSetup
             RedirectStandardError = true
         };
         psi.ArgumentList.Add(scriptPath);
+        psi.ArgumentList.Add("--remote");
         psi.ArgumentList.Add("--name");
         psi.ArgumentList.Add("SoundCloud Release Tracker");
         psi.ArgumentList.Add("--description");
@@ -67,7 +68,7 @@ internal static class SoundCloudAutoSetup
 
         try
         {
-            status?.Invoke("Войди в SoundCloud в браузере и подтверди подключение…");
+            status?.Invoke("Подтверди подключение на странице SoundCloud…");
             await process.WaitForExitAsync(timeout.Token);
         }
         catch
