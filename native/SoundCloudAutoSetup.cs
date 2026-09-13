@@ -19,10 +19,7 @@ internal static class SoundCloudAutoSetup
 
     public static async Task<AutoSetupResult> RunAsync(Action<string>? status, CancellationToken ct)
     {
-        var nodePath = Path.Combine(AppContext.BaseDirectory, "tools", "node.exe");
-        if (!File.Exists(nodePath))
-            throw new InvalidOperationException(
-                "В комплекте не найден защищённый Node.js runtime. Переустановите приложение из полного ZIP.");
+        var nodePath = EnsureEmbeddedNodeRuntime();
 
         status?.Invoke("Загружаю официальный helper SoundCloud…");
 
@@ -111,6 +108,29 @@ internal static class SoundCloudAutoSetup
 
         status?.Invoke("Сохраняю ключ безопасно в Windows Credential Manager…");
         return new AutoSetupResult(clientId, clientSecret);
+    }
+
+    private static string EnsureEmbeddedNodeRuntime()
+    {
+        var toolsDir = Path.Combine(AppConfig.AppDir, "runtime");
+        Directory.CreateDirectory(toolsDir);
+        var nodePath = Path.Combine(toolsDir, "node.exe");
+
+        if (File.Exists(nodePath) && new FileInfo(nodePath).Length > 10_000_000)
+            return nodePath;
+
+        var assembly = typeof(SoundCloudAutoSetup).Assembly;
+        using var resource = assembly.GetManifestResourceStream("ReleaseRadar.NodeRuntime");
+        if (resource is null)
+            throw new InvalidOperationException(
+                "В приложение не встроен Node.js runtime. Установите свежую версию Release Radar.");
+
+        var tmp = nodePath + ".tmp";
+        using (var output = File.Create(tmp))
+            resource.CopyTo(output);
+
+        File.Move(tmp, nodePath, true);
+        return nodePath;
     }
 
     private static string ComputeGitBlobSha1(byte[] content)
