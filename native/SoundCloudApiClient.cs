@@ -28,7 +28,7 @@ internal sealed class SoundCloudApiClient
     {
         _clientId = clientId.Trim();
         _clientSecret = clientSecret.Trim();
-        _http.DefaultRequestHeaders.UserAgent.ParseAdd("SoundCloudReleaseTracker/7.7");
+        _http.DefaultRequestHeaders.UserAgent.ParseAdd("SoundCloudReleaseTracker/7.8");
     }
 
     public SoundCloudApiClient(
@@ -54,14 +54,14 @@ internal sealed class SoundCloudApiClient
         if (_userTokenMode && !string.IsNullOrWhiteSpace(_refreshToken))
             return await RefreshUserTokenAsync(ct);
 
-        if (TryUseSharedClientToken())
+        if (TryUseSharedClientToken() || TryUsePersistedClientToken())
             return _accessToken;
 
         await ClientCredentialsLock.WaitAsync(ct);
         try
         {
-            // Another action may have refreshed the shared token while we waited.
-            if (TryUseSharedClientToken())
+            // Another action may have refreshed the shared/persisted token while we waited.
+            if (TryUseSharedClientToken() || TryUsePersistedClientToken())
                 return _accessToken;
 
             for (var attempt = 0; attempt < 3; attempt++)
@@ -103,6 +103,7 @@ internal sealed class SoundCloudApiClient
                 SharedClientId = _clientId;
                 SharedAccessToken = _accessToken;
                 SharedTokenExpiryUtc = _tokenExpiryUtc;
+                CredentialStore.SaveClientAccessToken(_clientId, _accessToken, _tokenExpiryUtc);
                 return _accessToken;
             }
 
@@ -192,7 +193,16 @@ internal sealed class SoundCloudApiClient
         using var resp = await _http.SendAsync(req, ct);
         var body = await resp.Content.ReadAsStringAsync(ct);
         if (!resp.IsSuccessStatusCode)
+        {
+            if ((int)resp.StatusCode == 401 && !_userTokenMode)
+            {
+                SharedAccessToken = "";
+                SharedTokenExpiryUtc = DateTime.MinValue;
+                CredentialStore.DeleteClientAccessToken();
+            }
+
             throw new InvalidOperationException($"SoundCloud API {(int)resp.StatusCode}: {Trim(body)}");
+        }
         return JsonDocument.Parse(body);
     }
 
