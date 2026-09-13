@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json.Serialization;
 
 namespace SoundCloudReleaseTracker;
@@ -15,6 +16,21 @@ public sealed class TrackEntry
     public string Artist { get; set; } = "";
     public string Genre { get; set; } = "";
     public string CreatedAt { get; set; } = "";
+    [JsonIgnore]
+    public string DisplayCreatedAt
+    {
+        get
+        {
+            if (DateTimeOffset.TryParse(
+                    CreatedAt,
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.AllowWhiteSpaces,
+                    out var value))
+                return value.ToLocalTime().ToString("dd.MM.yyyy HH:mm");
+
+            return CreatedAt;
+        }
+    }
     public string PermalinkUrl { get; set; } = "";
     public string ArtworkUrl { get; set; } = "";
     public int Duration { get; set; }
