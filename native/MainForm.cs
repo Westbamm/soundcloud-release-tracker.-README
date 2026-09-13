@@ -11,9 +11,8 @@ public sealed class MainForm : Form
     private readonly TabControl _tabs = new() { Dock = DockStyle.Fill };
     private readonly DataGridView _grid = new() { Dock = DockStyle.Fill, ReadOnly = true, SelectionMode = DataGridViewSelectionMode.FullRowSelect, AutoGenerateColumns = false };
     private readonly ToolStripStatusLabel _status = new("Готово");
-    private readonly TextBox _clientId = new() { Width = 620 };
-    private readonly TextBox _clientSecret = new() { Width = 620, UseSystemPasswordChar = true };
-    private readonly TextBox _redirectUri = new() { Width = 620 };
+    private readonly TextBox _clientId = new() { Width = 620, ReadOnly = true };
+    private readonly TextBox _clientSecret = new() { Width = 620, UseSystemPasswordChar = true, ReadOnly = true };
     private readonly Label _loginStatus = new() { AutoSize = true, Text = "SoundCloud API: не подключено" };
     private readonly TextBox _genres = new() { Width = 620 };
     private readonly NumericUpDown _poll = new() { Minimum = 1, Maximum = 1440, Value = 15, Width = 100 };
@@ -30,7 +29,7 @@ public sealed class MainForm : Form
 
     public MainForm()
     {
-        Text = "SoundCloud Release Tracker v5.3";
+        Text = "SoundCloud Release Tracker v5.4";
         Width = 1280;
         Height = 820;
         MinimumSize = new Size(1000, 650);
@@ -150,13 +149,12 @@ public sealed class MainForm : Form
         form.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         form.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
 
-        AddRow(form, 0, "Client ID", _clientId);
-        AddRow(form, 1, "Client Secret", _clientSecret);
-        AddRow(form, 2, "OAuth Redirect URI", _redirectUri);
-        AddRow(form, 3, "Жанры через запятую", _genres);
-        AddRow(form, 4, "Проверять каждые, мин", _poll);
-        AddRow(form, 5, "Искать за последние, ч", _lookback);
-        AddRow(form, 6, "Папка загрузки", _downloadDir);
+        AddRow(form, 0, "Client ID (автоматически)", _clientId);
+        AddRow(form, 1, "Client Secret (защищён)", _clientSecret);
+        AddRow(form, 2, "Жанры через запятую", _genres);
+        AddRow(form, 3, "Проверять каждые, мин", _poll);
+        AddRow(form, 4, "Искать за последние, ч", _lookback);
+        AddRow(form, 5, "Папка загрузки", _downloadDir);
 
         var browse = new Button { Text = "Выбрать…" };
         browse.Click += (_, _) =>
@@ -164,9 +162,9 @@ public sealed class MainForm : Form
             using var dlg = new FolderBrowserDialog { SelectedPath = _downloadDir.Text };
             if (dlg.ShowDialog(this) == DialogResult.OK) _downloadDir.Text = dlg.SelectedPath;
         };
-        form.Controls.Add(browse, 2, 6);
+        form.Controls.Add(browse, 2, 5);
 
-        form.Controls.Add(_autoDownload, 1, 7);
+        form.Controls.Add(_autoDownload, 1, 6);
 
         var buttons = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill };
         var connect = new Button
@@ -183,10 +181,10 @@ public sealed class MainForm : Form
         var del = new Button { Text = "Удалить Client Secret", AutoSize = true };
         del.Click += (_, _) => DeleteSecret();
         buttons.Controls.AddRange(new Control[] { connect, test, save, del });
-        form.Controls.Add(buttons, 1, 8);
+        form.Controls.Add(buttons, 1, 7);
 
         _loginStatus.ForeColor = Color.DimGray;
-        form.Controls.Add(_loginStatus, 1, 9);
+        form.Controls.Add(_loginStatus, 1, 8);
 
         var note = new Label
         {
@@ -195,7 +193,7 @@ public sealed class MainForm : Form
             ForeColor = Color.DarkGreen,
             Padding = new Padding(0, 8, 0, 0)
         };
-        form.Controls.Add(note, 1, 10);
+        form.Controls.Add(note, 1, 9);
 
         tab.Controls.Add(form);
     }
@@ -211,7 +209,6 @@ public sealed class MainForm : Form
     {
         _clientId.Text = _cfg.ClientId;
         try { _clientSecret.Text = CredentialStore.ReadSecret(); } catch { _clientSecret.Text = ""; }
-        _redirectUri.Text = string.IsNullOrWhiteSpace(_cfg.RedirectUri) ? SoundCloudOAuth.DefaultRedirectUri : _cfg.RedirectUri;
         _genres.Text = string.Join(", ", _cfg.Genres);
         _poll.Value = Math.Clamp(_cfg.PollMinutes, 1, 1440);
         _lookback.Value = Math.Clamp(_cfg.LookbackHours, 1, 720);
@@ -227,9 +224,6 @@ public sealed class MainForm : Form
         try
         {
             _cfg.ClientId = _clientId.Text.Trim();
-            _cfg.RedirectUri = string.IsNullOrWhiteSpace(_redirectUri.Text)
-                ? SoundCloudOAuth.DefaultRedirectUri
-                : _redirectUri.Text.Trim();
             _cfg.Genres = Csv(_genres.Text);
             _cfg.PollMinutes = (int)_poll.Value;
             _cfg.LookbackHours = (int)_lookback.Value;
