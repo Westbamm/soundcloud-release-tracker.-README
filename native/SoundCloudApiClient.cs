@@ -1,7 +1,6 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-using System.Web;
 
 namespace SoundCloudReleaseTracker;
 
@@ -61,16 +60,21 @@ internal sealed class SoundCloudApiClient
     public async Task<List<TrackEntry>> SearchTracksAsync(
         string genre, DateTime createdFromUtc, int? bpmFrom, int? bpmTo, int limit, CancellationToken ct)
     {
-        var q = HttpUtility.ParseQueryString("");
-        q["linked_partitioning"] = "true";
-        q["limit"] = Math.Clamp(limit, 1, 200).ToString();
-        q["access"] = "playable,preview";
-        if (!string.IsNullOrWhiteSpace(genre)) q["genres"] = genre;
-        q["created_at[from]"] = createdFromUtc.ToString("yyyy-MM-ddTHH:mm:ssZ");
-        if (bpmFrom.HasValue) q["bpm[from]"] = bpmFrom.Value.ToString();
-        if (bpmTo.HasValue) q["bpm[to]"] = bpmTo.Value.ToString();
+        var query = new List<string>
+        {
+            "linked_partitioning=true",
+            $"limit={Math.Clamp(limit, 1, 200)}",
+            "access=playable%2Cpreview",
+            $"created_at%5Bfrom%5D={Uri.EscapeDataString(createdFromUtc.ToString("yyyy-MM-ddTHH:mm:ssZ"))}"
+        };
+        if (!string.IsNullOrWhiteSpace(genre))
+            query.Add($"genres={Uri.EscapeDataString(genre)}");
+        if (bpmFrom.HasValue)
+            query.Add($"bpm%5Bfrom%5D={bpmFrom.Value}");
+        if (bpmTo.HasValue)
+            query.Add($"bpm%5Bto%5D={bpmTo.Value}");
 
-        var url = "https://api.soundcloud.com/tracks?" + q;
+        var url = "https://api.soundcloud.com/tracks?" + string.Join("&", query);
         var results = new List<TrackEntry>();
         for (var page = 0; page < 2 && !string.IsNullOrWhiteSpace(url); page++)
         {
