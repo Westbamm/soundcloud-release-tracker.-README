@@ -20,7 +20,7 @@ internal sealed class SoundCloudApiClient
     {
         _clientId = clientId.Trim();
         _clientSecret = clientSecret.Trim();
-        _http.DefaultRequestHeaders.UserAgent.ParseAdd("SoundCloudReleaseTracker/5.5");
+        _http.DefaultRequestHeaders.UserAgent.ParseAdd("SoundCloudReleaseTracker/7.5");
     }
 
     public SoundCloudApiClient(
@@ -157,17 +157,38 @@ internal sealed class SoundCloudApiClient
         Directory.CreateDirectory(AppConfig.PreviewCacheDir);
         var safe = string.Concat(track.Urn.Select(ch => char.IsLetterOrDigit(ch) ? ch : '_'));
         var path = Path.Combine(AppConfig.PreviewCacheDir, safe + ".preview.mp3");
-        if (File.Exists(path) && new FileInfo(path).Length > 1024) return path;
+        if (File.Exists(path) && new FileInfo(path).Length > 1024)
+            return path;
 
+        var token = await GetTokenAsync(ct);
         var urn = Uri.EscapeDataString(track.Urn).Replace("%3A", ":");
-        using var doc = await GetJsonAsync($"https://api.soundcloud.com/tracks/{urn}/streams", ct);
-        if (!doc.RootElement.TryGetProperty("preview_mp3_128_url", out var preview) || string.IsNullOrWhiteSpace(preview.GetString()))
-            throw new InvalidOperationException("Для этого трека SoundCloud не предоставляет preview.");
 
-        using var resp = await _http.GetAsync(preview.GetString(), HttpCompletionOption.ResponseHeadersRead, ct);
-        resp.EnsureSuccessStatusCode();
+        // SoundCloud's dedicated preview endpoint returns/redirects to the
+        // official 30-second preview. The initial API request must stay authenticated.
+        using var req = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"https://api.soundcloud.com/tracks/{urn}/preview");
+        req.Headers.Authorization = new AuthenticationHeaderValue("OAuth", token);
+        req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("audio/mpeg"));
+        req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("*/*"));
+
+        using var resp = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
+        if (!resp.IsSuccessStatusCode)
+        {
+            var body = await resp.Content.ReadAsStringAsync(ct);
+            throw new InvalidOperationException(
+                $"SoundCloud preview {(int)resp.StatusCode}: {Trim(body)}");
+        }
+
         await using var fs = File.Create(path);
         await resp.Content.CopyToAsync(fs, ct);
+
+        if (new FileInfo(path).Length <= 1024)
+        {
+            File.Delete(path);
+            throw new InvalidOperationException("SoundCloud вернул пустой preview.");
+        }
+
         return path;
     }
 
