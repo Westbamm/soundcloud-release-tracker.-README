@@ -14,8 +14,7 @@ public sealed class MainForm : Form
     private readonly TextBox _clientId = new() { Width = 620 };
     private readonly TextBox _clientSecret = new() { Width = 620, UseSystemPasswordChar = true };
     private readonly TextBox _redirectUri = new() { Width = 620 };
-    private readonly Label _loginStatus = new() { AutoSize = true, Text = "SoundCloud: не выполнен вход" };
-    private SoundCloudLoginResult? _loginSession;
+    private readonly Label _loginStatus = new() { AutoSize = true, Text = "SoundCloud API: не подключено" };
     private readonly TextBox _genres = new() { Width = 620 };
     private readonly NumericUpDown _poll = new() { Minimum = 1, Maximum = 1440, Value = 15, Width = 100 };
     private readonly NumericUpDown _lookback = new() { Minimum = 1, Maximum = 720, Value = 24, Width = 100 };
@@ -31,7 +30,7 @@ public sealed class MainForm : Form
 
     public MainForm()
     {
-        Text = "SoundCloud Release Tracker v5.2";
+        Text = "SoundCloud Release Tracker v5.3";
         Width = 1280;
         Height = 820;
         MinimumSize = new Size(1000, 650);
@@ -290,63 +289,6 @@ public sealed class MainForm : Form
         }
     }
 
-    private async Task LoginSoundCloudAsync()
-    {
-        try
-        {
-            SaveSettings();
-            var clientId = _clientId.Text.Trim();
-            var secret = _clientSecret.Text.Trim();
-            if (string.IsNullOrWhiteSpace(secret))
-                secret = CredentialStore.ReadSecret();
-
-            if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(secret))
-                throw new InvalidOperationException(
-                    "Сначала укажите Client ID и Client Secret приложения SoundCloud.");
-
-            var redirectUri = string.IsNullOrWhiteSpace(_redirectUri.Text)
-                ? SoundCloudOAuth.DefaultRedirectUri
-                : _redirectUri.Text.Trim();
-
-            SetStatus("Запускаю вход через SoundCloud…");
-            _loginSession = await SoundCloudOAuth.LoginAsync(
-                clientId,
-                secret,
-                redirectUri,
-                status => BeginInvoke(() => SetStatus(status)),
-                CancellationToken.None);
-
-            _loginStatus.Text = $"SoundCloud: вошли как {_loginSession.Username}";
-            _loginStatus.ForeColor = Color.DarkGreen;
-            SetStatus($"Вход выполнен: {_loginSession.Username}");
-            MessageBox.Show(
-                this,
-                $"Успешный вход через SoundCloud.\nПользователь: {_loginSession.Username}\n\nПароль не передавался приложению.",
-                "SoundCloud",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information);
-        }
-        catch (OperationCanceledException)
-        {
-            SetStatus("Вход отменён");
-        }
-        catch (Exception ex)
-        {
-            _loginSession = null;
-            _loginStatus.Text = "SoundCloud: вход не выполнен";
-            _loginStatus.ForeColor = Color.DarkRed;
-            ShowError(ex.Message);
-        }
-    }
-
-    private void LogoutSoundCloud()
-    {
-        _loginSession = null;
-        _loginStatus.Text = "SoundCloud: не выполнен вход";
-        _loginStatus.ForeColor = Color.DimGray;
-        SetStatus("Сессия SoundCloud завершена");
-    }
-
     private async Task TestApiAsync()
     {
         try
@@ -469,19 +411,8 @@ public sealed class MainForm : Form
             try { secret = CredentialStore.ReadSecret(); } catch { }
         }
         if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(secret))
-            throw new InvalidOperationException("Введите Client ID и Client Secret в настройках.");
-
-        if (_loginSession is not null &&
-            !string.IsNullOrWhiteSpace(_loginSession.AccessToken) &&
-            DateTime.UtcNow < _loginSession.ExpiresUtc)
-        {
-            return new SoundCloudApiClient(
-                id,
-                secret,
-                _loginSession.AccessToken,
-                _loginSession.RefreshToken,
-                _loginSession.ExpiresUtc);
-        }
+            throw new InvalidOperationException(
+                "Нажмите «Подключить SoundCloud автоматически» в настройках.");
 
         return new SoundCloudApiClient(id, secret);
     }
