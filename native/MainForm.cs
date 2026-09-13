@@ -31,7 +31,7 @@ public sealed class MainForm : Form
 
     public MainForm()
     {
-        Text = "SoundCloud Release Tracker v5.1";
+        Text = "SoundCloud Release Tracker v5.2";
         Width = 1280;
         Height = 820;
         MinimumSize = new Size(1000, 650);
@@ -56,7 +56,7 @@ public sealed class MainForm : Form
 
         var title = new Label
         {
-            Text = "SoundCloud Release Tracker v5.1",
+            Text = "SoundCloud Release Tracker v5.2",
             AutoSize = true,
             Font = new Font("Segoe UI", 18, FontStyle.Bold),
             Padding = new Padding(10, 10, 10, 6)
@@ -170,17 +170,20 @@ public sealed class MainForm : Form
         form.Controls.Add(_autoDownload, 1, 7);
 
         var buttons = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill };
-        var login = new Button { Text = "Войти через SoundCloud", AutoSize = true };
-        login.Click += async (_, _) => await LoginSoundCloudAsync();
-        var logout = new Button { Text = "Выйти", AutoSize = true };
-        logout.Click += (_, _) => LogoutSoundCloud();
+        var connect = new Button
+        {
+            Text = "Подключить SoundCloud автоматически",
+            AutoSize = true,
+            Font = new Font("Segoe UI", 9, FontStyle.Bold)
+        };
+        connect.Click += async (_, _) => await AutoConnectSoundCloudAsync();
         var test = new Button { Text = "Проверить API", AutoSize = true };
         test.Click += async (_, _) => await TestApiAsync();
         var save = new Button { Text = "Сохранить настройки", AutoSize = true };
         save.Click += (_, _) => SaveSettings();
         var del = new Button { Text = "Удалить Client Secret", AutoSize = true };
         del.Click += (_, _) => DeleteSecret();
-        buttons.Controls.AddRange(new Control[] { login, logout, test, save, del });
+        buttons.Controls.AddRange(new Control[] { connect, test, save, del });
         form.Controls.Add(buttons, 1, 8);
 
         _loginStatus.ForeColor = Color.DimGray;
@@ -188,7 +191,7 @@ public sealed class MainForm : Form
 
         var note = new Label
         {
-            Text = "Client Secret хранится только в Windows Credential Manager и не записывается в config.json.",
+            Text = "Рекомендуется кнопка «Подключить SoundCloud автоматически». Пароль вводится только на официальном сайте SoundCloud.\nClient Secret хранится в Windows Credential Manager и не записывается в config.json.",
             AutoSize = true,
             ForeColor = Color.DarkGreen,
             Padding = new Padding(0, 8, 0, 0)
@@ -242,6 +245,49 @@ public sealed class MainForm : Form
             RefreshGrid();
         }
         catch (Exception ex) { ShowError(ex.Message); }
+    }
+
+    private async Task AutoConnectSoundCloudAsync()
+    {
+        try
+        {
+            SetStatus("Подключаю SoundCloud…");
+            var result = await SoundCloudAutoSetup.RunAsync(
+                status => BeginInvoke(() => SetStatus(status)),
+                CancellationToken.None);
+
+            CredentialStore.WriteSecret(result.ClientSecret);
+            _clientId.Text = result.ClientId;
+            _clientSecret.Text = result.ClientSecret;
+            _cfg.ClientId = result.ClientId;
+            _cfg.Save();
+
+            SetStatus("SoundCloud подключён • проверяю API…");
+            var client = new SoundCloudApiClient(result.ClientId, result.ClientSecret);
+            await client.TestAsync(CancellationToken.None);
+
+            _loginStatus.Text = "SoundCloud API: подключено";
+            _loginStatus.ForeColor = Color.DarkGreen;
+            SetStatus("SoundCloud подключён");
+            MessageBox.Show(
+                this,
+                "Готово. SoundCloud подключён автоматически.\n\n" +
+                "Client Secret сохранён в Windows Credential Manager. " +
+                "Пароль SoundCloud приложение не получает.",
+                "SoundCloud",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+        }
+        catch (OperationCanceledException)
+        {
+            SetStatus("Подключение отменено");
+        }
+        catch (Exception ex)
+        {
+            _loginStatus.Text = "SoundCloud API: не подключено";
+            _loginStatus.ForeColor = Color.DarkRed;
+            ShowError(ex.Message);
+        }
     }
 
     private async Task LoginSoundCloudAsync()
