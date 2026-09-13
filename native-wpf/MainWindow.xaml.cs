@@ -13,6 +13,7 @@ public partial class MainWindow : Window
     private readonly MciPlayer _player = new();
     private readonly System.Windows.Threading.DispatcherTimer _timer = new();
     private bool _busy;
+    private string _lastDownloadedPath = "";
 
     public MainWindow()
     {
@@ -344,19 +345,33 @@ public partial class MainWindow : Window
                 CancellationToken.None);
 
             _store.MarkDownloaded(track.Urn, path);
-            SetStatus("Трек скачан");
-
-            MessageBox.Show(
-                this,
-                $"Сохранено:\n{path}",
-                "Release Radar",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
+            _lastDownloadedPath = path;
+            DownloadToastText.Text = Path.GetFileName(path);
+            DownloadToast.Visibility = Visibility.Visible;
+            SetStatus($"Скачано: {Path.GetFileName(path)}");
         }
         catch (Exception ex)
         {
             ShowError(ex.Message);
         }
+    }
+
+    private void OpenDownloadFolder_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_lastDownloadedPath)) return;
+
+        var directory = Path.GetDirectoryName(_lastDownloadedPath);
+        if (string.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory)) return;
+
+        Process.Start(new ProcessStartInfo(directory)
+        {
+            UseShellExecute = true
+        });
+    }
+
+    private void CloseDownloadToast_Click(object sender, RoutedEventArgs e)
+    {
+        DownloadToast.Visibility = Visibility.Collapsed;
     }
 
     private void OpenSelected()
