@@ -16,8 +16,7 @@ DEFAULT_DOWNLOAD_DIR = Path.home() / "Music" / "SoundCloud New Releases"
 
 DEFAULT_CONFIG: dict[str, Any] = {
     "client_id": "",
-    "client_secret": "",
-    "genres": ["House", "Tech House", "Afro House"],
+        "genres": ["House", "Tech House", "Afro House"],
     "poll_minutes": 15,
     "lookback_hours": 24,
     "bpm_from": None,
@@ -42,7 +41,12 @@ def load_config() -> dict[str, Any]:
         loaded = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
         result = dict(DEFAULT_CONFIG)
         if isinstance(loaded, dict):
+            legacy_secret = str(loaded.get("client_secret") or "")
+            loaded = dict(loaded)
+            loaded.pop("client_secret", None)
             result.update(loaded)
+            if legacy_secret:
+                result["_legacy_client_secret"] = legacy_secret
         result["favorite_artists"] = unique_artists(result.get("favorite_artists", []))
         result["blacklisted_artists"] = unique_artists(result.get("blacklisted_artists", []))
         result["genre_bpm_rules"] = sanitize_bpm_rules(result.get("genre_bpm_rules", {}))
@@ -54,6 +58,8 @@ def load_config() -> dict[str, Any]:
 def save_config(config: dict[str, Any]) -> None:
     APP_DIR.mkdir(parents=True, exist_ok=True)
     payload = dict(config)
+    payload.pop("client_secret", None)
+    payload.pop("_legacy_client_secret", None)
     payload["favorite_artists"] = unique_artists(payload.get("favorite_artists", []))
     payload["blacklisted_artists"] = unique_artists(payload.get("blacklisted_artists", []))
     payload["genre_bpm_rules"] = sanitize_bpm_rules(payload.get("genre_bpm_rules", {}))
