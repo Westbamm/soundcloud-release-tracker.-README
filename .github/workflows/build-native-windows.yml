@@ -1,0 +1,63 @@
+name: Build Native Windows Portable
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'native/**'
+      - '.github/workflows/build-native-windows.yml'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build
+        shell: pwsh
+        run: dotnet build native/SoundCloudReleaseTracker.csproj -c Release
+
+      - name: Publish self-contained portable folder
+        shell: pwsh
+        run: >
+          dotnet publish native/SoundCloudReleaseTracker.csproj
+          -c Release
+          -r win-x64
+          --self-contained true
+          -p:PublishSingleFile=false
+          -p:DebugType=None
+          -o publish/native-win-x64
+
+      - name: Verify native executable
+        shell: pwsh
+        run: |
+          if (-not (Test-Path 'publish/native-win-x64/SoundCloudReleaseTracker.exe')) {
+            throw 'Native EXE was not created.'
+          }
+          Get-Item 'publish/native-win-x64/SoundCloudReleaseTracker.exe' | Format-List Name,Length,LastWriteTime
+          if (Test-Path 'publish/native-win-x64/python*.dll') {
+            throw 'Unexpected Python runtime found.'
+          }
+
+      - name: Create portable ZIP
+        shell: pwsh
+        run: |
+          Compress-Archive -Path 'publish/native-win-x64/*' -DestinationPath 'SoundCloudReleaseTracker-v5-Native-Windows-x64.zip' -Force
+
+      - name: Upload native portable app
+        uses: actions/upload-artifact@v4
+        with:
+          name: SoundCloudReleaseTracker-v5-Native-Windows-x64
+          path: SoundCloudReleaseTracker-v5-Native-Windows-x64.zip
+          if-no-files-found: error
+          retention-days: 30
