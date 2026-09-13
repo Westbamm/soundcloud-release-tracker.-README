@@ -49,6 +49,12 @@ internal sealed class TrackStore
     public IReadOnlyList<TrackEntry> All() =>
         _tracks.Values.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.FirstSeenUtc).ToList();
 
+    public void Clear()
+    {
+        _tracks.Clear();
+        Save();
+    }
+
     private void Save()
     {
         var tmp = _path + ".tmp";
