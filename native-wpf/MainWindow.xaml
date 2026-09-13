@@ -1,7 +1,7 @@
 <Window x:Class="SoundCloudReleaseTracker.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Release Radar v7.6"
+        Title="Release Radar v7.7"
         Width="1440" Height="900"
         MinWidth="1120" MinHeight="720"
         WindowStartupLocation="CenterScreen"
@@ -250,7 +250,7 @@
             </Grid.ColumnDefinitions>
             <StackPanel VerticalAlignment="Center">
                 <TextBlock Text="Release Radar" FontSize="29" FontWeight="SemiBold"/>
-                <TextBlock Text="SoundCloud release tracker  •  v7.6"
+                <TextBlock Text="SoundCloud release tracker  •  v7.7"
                            Foreground="{StaticResource Muted}"
                            FontSize="12"
                            Margin="1,2,0,0"/>
@@ -706,41 +706,100 @@
                 HorizontalAlignment="Right"
                 VerticalAlignment="Bottom"
                 Margin="0,0,24,56"
-                Width="430"
+                Width="390"
                 Background="#18221D"
                 BorderBrush="#2C6A4D"
                 BorderThickness="1"
                 CornerRadius="10"
-                Padding="16">
+                Padding="16,13">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
+
                 <StackPanel>
                     <TextBlock Text="Скачано"
                                Foreground="{StaticResource Success}"
                                FontWeight="SemiBold"
                                FontSize="14"/>
                     <TextBlock x:Name="DownloadToastText"
-                               Margin="0,5,0,0"
+                               Margin="0,4,0,0"
                                Foreground="{StaticResource Text}"
-                               FontSize="13"
+                               FontSize="12.5"
                                TextWrapping="Wrap"/>
                 </StackPanel>
-                <StackPanel Grid.Column="1"
-                            Margin="14,0,0,0"
-                            VerticalAlignment="Center">
-                    <Button Content="Открыть папку"
-                            Style="{StaticResource SecondaryButton}"
-                            Padding="12,0"
-                            Margin="0,0,0,6"
-                            Click="OpenDownloadFolder_Click"/>
-                    <Button Content="Закрыть"
-                            Style="{StaticResource SecondaryButton}"
-                            Padding="12,0"
-                            Click="CloseDownloadToast_Click"/>
+
+                <Button Grid.Column="1"
+                        Content="Открыть папку"
+                        Margin="14,0,10,0"
+                        Padding="0"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Foreground="{StaticResource Success}"
+                        FontWeight="SemiBold"
+                        Cursor="Hand"
+                        VerticalAlignment="Center"
+                        Click="OpenDownloadFolder_Click"/>
+
+                <Button Grid.Column="2"
+                        Content="×"
+                        Width="26"
+                        Height="26"
+                        Padding="0"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Foreground="{StaticResource Muted}"
+                        FontSize="16"
+                        Cursor="Hand"
+                        VerticalAlignment="Top"
+                        Click="CloseDownloadToast_Click"/>
+            </Grid>
+        </Border>
+
+        <Border x:Name="ErrorToast"
+                Grid.RowSpan="3"
+                Visibility="Collapsed"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Bottom"
+                Margin="0,0,24,56"
+                Width="430"
+                Background="#25191B"
+                BorderBrush="#6A343A"
+                BorderThickness="1"
+                CornerRadius="10"
+                Padding="16,13">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel>
+                    <TextBlock Text="Ошибка"
+                               Foreground="{StaticResource Danger}"
+                               FontWeight="SemiBold"
+                               FontSize="14"/>
+                    <TextBlock x:Name="ErrorToastText"
+                               Margin="0,4,0,0"
+                               Foreground="{StaticResource Text}"
+                               FontSize="12.5"
+                               TextWrapping="Wrap"/>
                 </StackPanel>
+
+                <Button Grid.Column="1"
+                        Content="×"
+                        Width="26"
+                        Height="26"
+                        Padding="0"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Foreground="{StaticResource Muted}"
+                        FontSize="16"
+                        Cursor="Hand"
+                        VerticalAlignment="Top"
+                        Click="CloseErrorToast_Click"/>
             </Grid>
         </Border>
     </Grid>
