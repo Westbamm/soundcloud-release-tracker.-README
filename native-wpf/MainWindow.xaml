@@ -1,7 +1,7 @@
 <Window x:Class="SoundCloudReleaseTracker.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Release Radar v7.0"
+        Title="Release Radar v7.1"
         Width="1440" Height="900"
         MinWidth="1120" MinHeight="720"
         WindowStartupLocation="CenterScreen"
@@ -140,6 +140,43 @@
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
 
+        <Style x:Key="FilterToggle" TargetType="ToggleButton">
+            <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+            <Setter Property="Background" Value="{StaticResource CardAlt}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource Border}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="Padding" Value="13,0"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="17">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#25303E"/>
+                                <Setter Property="Foreground" Value="{StaticResource Text}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#33261F"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource Accent}"/>
+                                <Setter Property="Foreground" Value="{StaticResource Text}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+
         <Style TargetType="DataGrid">
             <Setter Property="Background" Value="{StaticResource Card}"/>
             <Setter Property="Foreground" Value="{StaticResource Text}"/>
@@ -177,7 +214,7 @@
             <Setter Property="Foreground" Value="{StaticResource Text}"/>
             <Style.Triggers>
                 <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="#4A2A1D"/>
+                    <Setter Property="Background" Value="#2B2523"/>
                     <Setter Property="Foreground" Value="White"/>
                 </Trigger>
             </Style.Triggers>
@@ -206,7 +243,7 @@
             </Grid.ColumnDefinitions>
             <StackPanel VerticalAlignment="Center">
                 <TextBlock Text="Release Radar" FontSize="29" FontWeight="SemiBold"/>
-                <TextBlock Text="SoundCloud release tracker  •  v7.0"
+                <TextBlock Text="SoundCloud release tracker  •  v7.1"
                            Foreground="{StaticResource Muted}"
                            FontSize="12"
                            Margin="1,2,0,0"/>
@@ -289,6 +326,7 @@
                             <ColumnDefinition Width="12"/>
                             <ColumnDefinition Width="110"/>
                             <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="190"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
@@ -308,21 +346,51 @@
 
                     <Grid Grid.Row="2">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="155"/>
-                            <ColumnDefinition Width="155"/>
+                            <ColumnDefinition Width="142"/>
+                            <ColumnDefinition Width="150"/>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="330"/>
+                            <ColumnDefinition Width="390"/>
                         </Grid.ColumnDefinitions>
-                        <CheckBox x:Name="OnlyFavoritesCheck"
-                                  Content="Только любимые"
-                                  Checked="FilterChanged" Unchecked="FilterChanged"/>
-                        <CheckBox x:Name="OnlyDownloadCheck"
-                                  Grid.Column="1"
-                                  Content="Только download"
-                                  Checked="FilterChanged" Unchecked="FilterChanged"/>
-                        <TextBox x:Name="SearchBox" Grid.Column="3"
-                                 Margin="0,6,0,6"
-                                 TextChanged="SearchBox_TextChanged"/>
+
+                        <ToggleButton x:Name="OnlyFavoritesCheck"
+                                      Content="★  Любимые"
+                                      HorizontalAlignment="Left"
+                                      Style="{StaticResource FilterToggle}"
+                                      Checked="FilterChanged" Unchecked="FilterChanged"/>
+
+                        <ToggleButton x:Name="OnlyDownloadCheck"
+                                      Grid.Column="1"
+                                      Content="↓  Downloadable"
+                                      HorizontalAlignment="Left"
+                                      Style="{StaticResource FilterToggle}"
+                                      Checked="FilterChanged" Unchecked="FilterChanged"/>
+
+                        <Grid Grid.Column="3" Margin="0,5,0,5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="46"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid>
+                                <TextBox x:Name="SearchBox"
+                                         TextChanged="SearchBox_TextChanged"
+                                         Padding="12,8"/>
+                                <TextBlock x:Name="SearchHint"
+                                           Text="Поиск по артисту, названию или жанру…"
+                                           Foreground="#718095"
+                                           Margin="13,0,0,0"
+                                           VerticalAlignment="Center"
+                                           IsHitTestVisible="False"/>
+                            </Grid>
+                            <Button x:Name="ClearSearchButton"
+                                    Grid.Column="1"
+                                    Content="×"
+                                    Margin="6,0,0,0"
+                                    Padding="0"
+                                    IsEnabled="False"
+                                    ToolTip="Очистить поиск"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Click="ClearSearch_Click"/>
+                        </Grid>
                     </Grid>
 
                     <Border Grid.Row="3"
@@ -336,7 +404,7 @@
                                   IsReadOnly="True"
                                   MouseDoubleClick="TracksGrid_MouseDoubleClick">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="ДАТА" Binding="{Binding CreatedAt}" Width="160"/>
+                                <DataGridTextColumn Header="ДАТА" Binding="{Binding DisplayCreatedAt}" Width="160"/>
                                 <DataGridTextColumn Header="АРТИСТ" Binding="{Binding Artist}" Width="220"/>
                                 <DataGridTextColumn Header="НАЗВАНИЕ" Binding="{Binding Title}" Width="*"/>
                                 <DataGridTextColumn Header="ЖАНР" Binding="{Binding Genre}" Width="150"/>
