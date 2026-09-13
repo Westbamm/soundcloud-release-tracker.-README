@@ -38,11 +38,22 @@ jobs:
           -p:DebugType=None
           -o publish/native-win-x64
 
+      - name: Bundle Node runtime for official SoundCloud helper
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path 'publish/native-win-x64/tools' | Out-Null
+          $node = (Get-Command node).Source
+          Copy-Item $node 'publish/native-win-x64/tools/node.exe' -Force
+          Write-Host "Bundled Node runtime from: $node"
+
       - name: Verify native executable
         shell: pwsh
         run: |
           if (-not (Test-Path 'publish/native-win-x64/SoundCloudReleaseTracker.exe')) {
             throw 'Native EXE was not created.'
+          }
+          if (-not (Test-Path 'publish/native-win-x64/tools/node.exe')) {
+            throw 'Bundled Node runtime was not created.'
           }
           Get-Item 'publish/native-win-x64/SoundCloudReleaseTracker.exe' | Format-List Name,Length,LastWriteTime
           if (Test-Path 'publish/native-win-x64/python*.dll') {
