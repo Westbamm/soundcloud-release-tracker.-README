@@ -13,6 +13,9 @@ public sealed class MainForm : Form
     private readonly ToolStripStatusLabel _status = new("Готово");
     private readonly TextBox _clientId = new() { Width = 620 };
     private readonly TextBox _clientSecret = new() { Width = 620, UseSystemPasswordChar = true };
+    private readonly TextBox _redirectUri = new() { Width = 620 };
+    private readonly Label _loginStatus = new() { AutoSize = true, Text = "SoundCloud: не выполнен вход" };
+    private SoundCloudLoginResult? _loginSession;
     private readonly TextBox _genres = new() { Width = 620 };
     private readonly NumericUpDown _poll = new() { Minimum = 1, Maximum = 1440, Value = 15, Width = 100 };
     private readonly NumericUpDown _lookback = new() { Minimum = 1, Maximum = 720, Value = 24, Width = 100 };
@@ -28,7 +31,7 @@ public sealed class MainForm : Form
 
     public MainForm()
     {
-        Text = "SoundCloud Release Tracker v5";
+        Text = "SoundCloud Release Tracker v5.1";
         Width = 1280;
         Height = 820;
         MinimumSize = new Size(1000, 650);
@@ -53,7 +56,7 @@ public sealed class MainForm : Form
 
         var title = new Label
         {
-            Text = "SoundCloud Release Tracker v5",
+            Text = "SoundCloud Release Tracker v5.1",
             AutoSize = true,
             Font = new Font("Segoe UI", 18, FontStyle.Bold),
             Padding = new Padding(10, 10, 10, 6)
@@ -150,10 +153,11 @@ public sealed class MainForm : Form
 
         AddRow(form, 0, "Client ID", _clientId);
         AddRow(form, 1, "Client Secret", _clientSecret);
-        AddRow(form, 2, "Жанры через запятую", _genres);
-        AddRow(form, 3, "Проверять каждые, мин", _poll);
-        AddRow(form, 4, "Искать за последние, ч", _lookback);
-        AddRow(form, 5, "Папка загрузки", _downloadDir);
+        AddRow(form, 2, "OAuth Redirect URI", _redirectUri);
+        AddRow(form, 3, "Жанры через запятую", _genres);
+        AddRow(form, 4, "Проверять каждые, мин", _poll);
+        AddRow(form, 5, "Искать за последние, ч", _lookback);
+        AddRow(form, 6, "Папка загрузки", _downloadDir);
 
         var browse = new Button { Text = "Выбрать…" };
         browse.Click += (_, _) =>
@@ -161,19 +165,26 @@ public sealed class MainForm : Form
             using var dlg = new FolderBrowserDialog { SelectedPath = _downloadDir.Text };
             if (dlg.ShowDialog(this) == DialogResult.OK) _downloadDir.Text = dlg.SelectedPath;
         };
-        form.Controls.Add(browse, 2, 5);
+        form.Controls.Add(browse, 2, 6);
 
-        form.Controls.Add(_autoDownload, 1, 6);
+        form.Controls.Add(_autoDownload, 1, 7);
 
         var buttons = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Fill };
+        var login = new Button { Text = "Войти через SoundCloud", AutoSize = true };
+        login.Click += async (_, _) => await LoginSoundCloudAsync();
+        var logout = new Button { Text = "Выйти", AutoSize = true };
+        logout.Click += (_, _) => LogoutSoundCloud();
         var test = new Button { Text = "Проверить API", AutoSize = true };
         test.Click += async (_, _) => await TestApiAsync();
         var save = new Button { Text = "Сохранить настройки", AutoSize = true };
         save.Click += (_, _) => SaveSettings();
         var del = new Button { Text = "Удалить Client Secret", AutoSize = true };
         del.Click += (_, _) => DeleteSecret();
-        buttons.Controls.AddRange(new Control[] { test, save, del });
-        form.Controls.Add(buttons, 1, 7);
+        buttons.Controls.AddRange(new Control[] { login, logout, test, save, del });
+        form.Controls.Add(buttons, 1, 8);
+
+        _loginStatus.ForeColor = Color.DimGray;
+        form.Controls.Add(_loginStatus, 1, 9);
 
         var note = new Label
         {
@@ -182,7 +193,7 @@ public sealed class MainForm : Form
             ForeColor = Color.DarkGreen,
             Padding = new Padding(0, 8, 0, 0)
         };
-        form.Controls.Add(note, 1, 8);
+        form.Controls.Add(note, 1, 10);
 
         tab.Controls.Add(form);
     }
@@ -198,6 +209,7 @@ public sealed class MainForm : Form
     {
         _clientId.Text = _cfg.ClientId;
         try { _clientSecret.Text = CredentialStore.ReadSecret(); } catch { _clientSecret.Text = ""; }
+        _redirectUri.Text = string.IsNullOrWhiteSpace(_cfg.RedirectUri) ? SoundCloudOAuth.DefaultRedirectUri : _cfg.RedirectUri;
         _genres.Text = string.Join(", ", _cfg.Genres);
         _poll.Value = Math.Clamp(_cfg.PollMinutes, 1, 1440);
         _lookback.Value = Math.Clamp(_cfg.LookbackHours, 1, 720);
@@ -213,6 +225,9 @@ public sealed class MainForm : Form
         try
         {
             _cfg.ClientId = _clientId.Text.Trim();
+            _cfg.RedirectUri = string.IsNullOrWhiteSpace(_redirectUri.Text)
+                ? SoundCloudOAuth.DefaultRedirectUri
+                : _redirectUri.Text.Trim();
             _cfg.Genres = Csv(_genres.Text);
             _cfg.PollMinutes = (int)_poll.Value;
             _cfg.LookbackHours = (int)_lookback.Value;
@@ -227,6 +242,63 @@ public sealed class MainForm : Form
             RefreshGrid();
         }
         catch (Exception ex) { ShowError(ex.Message); }
+    }
+
+    private async Task LoginSoundCloudAsync()
+    {
+        try
+        {
+            SaveSettings();
+            var clientId = _clientId.Text.Trim();
+            var secret = _clientSecret.Text.Trim();
+            if (string.IsNullOrWhiteSpace(secret))
+                secret = CredentialStore.ReadSecret();
+
+            if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(secret))
+                throw new InvalidOperationException(
+                    "Сначала укажите Client ID и Client Secret приложения SoundCloud.");
+
+            var redirectUri = string.IsNullOrWhiteSpace(_redirectUri.Text)
+                ? SoundCloudOAuth.DefaultRedirectUri
+                : _redirectUri.Text.Trim();
+
+            SetStatus("Запускаю вход через SoundCloud…");
+            _loginSession = await SoundCloudOAuth.LoginAsync(
+                clientId,
+                secret,
+                redirectUri,
+                status => BeginInvoke(() => SetStatus(status)),
+                CancellationToken.None);
+
+            _loginStatus.Text = $"SoundCloud: вошли как {_loginSession.Username}";
+            _loginStatus.ForeColor = Color.DarkGreen;
+            SetStatus($"Вход выполнен: {_loginSession.Username}");
+            MessageBox.Show(
+                this,
+                $"Успешный вход через SoundCloud.\nПользователь: {_loginSession.Username}\n\nПароль не передавался приложению.",
+                "SoundCloud",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+        }
+        catch (OperationCanceledException)
+        {
+            SetStatus("Вход отменён");
+        }
+        catch (Exception ex)
+        {
+            _loginSession = null;
+            _loginStatus.Text = "SoundCloud: вход не выполнен";
+            _loginStatus.ForeColor = Color.DarkRed;
+            ShowError(ex.Message);
+        }
+    }
+
+    private void LogoutSoundCloud()
+    {
+        _loginSession = null;
+        _loginStatus.Text = "SoundCloud: не выполнен вход";
+        _loginStatus.ForeColor = Color.DimGray;
+        SetStatus("Сессия SoundCloud завершена");
     }
 
     private async Task TestApiAsync()
@@ -352,6 +424,19 @@ public sealed class MainForm : Form
         }
         if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(secret))
             throw new InvalidOperationException("Введите Client ID и Client Secret в настройках.");
+
+        if (_loginSession is not null &&
+            !string.IsNullOrWhiteSpace(_loginSession.AccessToken) &&
+            DateTime.UtcNow < _loginSession.ExpiresUtc)
+        {
+            return new SoundCloudApiClient(
+                id,
+                secret,
+                _loginSession.AccessToken,
+                _loginSession.RefreshToken,
+                _loginSession.ExpiresUtc);
+        }
+
         return new SoundCloudApiClient(id, secret);
     }
 
