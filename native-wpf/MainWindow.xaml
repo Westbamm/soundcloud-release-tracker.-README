@@ -1,7 +1,7 @@
 <Window x:Class="SoundCloudReleaseTracker.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Release Radar v7.4"
+        Title="Release Radar v7.5"
         Width="1440" Height="900"
         MinWidth="1120" MinHeight="720"
         WindowStartupLocation="CenterScreen"
@@ -250,7 +250,7 @@
             </Grid.ColumnDefinitions>
             <StackPanel VerticalAlignment="Center">
                 <TextBlock Text="Release Radar" FontSize="29" FontWeight="SemiBold"/>
-                <TextBlock Text="SoundCloud release tracker  •  v7.4"
+                <TextBlock Text="SoundCloud release tracker  •  v7.5"
                            Foreground="{StaticResource Muted}"
                            FontSize="12"
                            Margin="1,2,0,0"/>
@@ -674,6 +674,50 @@
                        Foreground="{StaticResource Muted}"
                        VerticalAlignment="Center"
                        FontSize="12"/>
+        </Border>
+
+        <Border x:Name="DownloadToast"
+                Grid.RowSpan="3"
+                Visibility="Collapsed"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Bottom"
+                Margin="0,0,24,56"
+                Width="430"
+                Background="#18221D"
+                BorderBrush="#2C6A4D"
+                BorderThickness="1"
+                CornerRadius="10"
+                Padding="16">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="Скачано"
+                               Foreground="{StaticResource Success}"
+                               FontWeight="SemiBold"
+                               FontSize="14"/>
+                    <TextBlock x:Name="DownloadToastText"
+                               Margin="0,5,0,0"
+                               Foreground="{StaticResource Text}"
+                               FontSize="13"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1"
+                            Margin="14,0,0,0"
+                            VerticalAlignment="Center">
+                    <Button Content="Открыть папку"
+                            Style="{StaticResource SecondaryButton}"
+                            Padding="12,0"
+                            Margin="0,0,0,6"
+                            Click="OpenDownloadFolder_Click"/>
+                    <Button Content="Закрыть"
+                            Style="{StaticResource SecondaryButton}"
+                            Padding="12,0"
+                            Click="CloseDownloadToast_Click"/>
+                </StackPanel>
+            </Grid>
         </Border>
     </Grid>
 </Window>
