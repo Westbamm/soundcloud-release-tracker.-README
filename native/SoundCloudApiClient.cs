@@ -128,6 +128,23 @@ internal sealed class SoundCloudApiClient
         return true;
     }
 
+    private bool TryUsePersistedClientToken()
+    {
+        if (!CredentialStore.TryReadClientAccessToken(
+                _clientId,
+                out var persistedToken,
+                out var persistedExpiry))
+            return false;
+
+        _accessToken = persistedToken;
+        _tokenExpiryUtc = persistedExpiry;
+
+        SharedClientId = _clientId;
+        SharedAccessToken = persistedToken;
+        SharedTokenExpiryUtc = persistedExpiry;
+        return true;
+    }
+
     private static TimeSpan GetRetryDelay(HttpResponseMessage response, int attempt)
     {
         var retryAfter = response.Headers.RetryAfter;
