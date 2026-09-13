@@ -9,12 +9,18 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
 from config_store import DB_PATH, PREVIEW_CACHE_DIR, load_config, save_config
+from credential_store import (
+    CredentialStoreError,
+    delete_client_secret,
+    read_client_secret,
+    write_client_secret,
+)
 from database import TrackDatabase
 from preview_player import PreviewPlayer, PreviewPlayerError
 from rules import contains_artist, sanitize_bpm_rules, track_artist, unique_artists
 from soundcloud_client import SoundCloudClient, SoundCloudError, track_urn
 
-APP_TITLE = "SoundCloud Release Tracker v4"
+APP_TITLE = "SoundCloud Release Tracker v4.3"
 GENRES = ["House","Tech House","Deep House","Afro House","Progressive House","Techno",
           "Melodic Techno","Trance","Drum & Bass","Dubstep","Hip Hop","Trap","Ambient","Electronic"]
 
@@ -122,6 +128,11 @@ class App(tk.Tk):
         ttk.Button(buttons, text="Выбрать папку", command=self.choose_dir).pack(side="left")
         ttk.Button(buttons, text="Проверить API", command=self.test_api).pack(side="left", padx=8)
         ttk.Button(buttons, text="Сохранить настройки", command=self.save).pack(side="left")
+        ttk.Button(buttons, text="Удалить Client Secret", command=self.delete_secret).pack(side="left", padx=8)
+        ttk.Label(
+            settings,
+            text="Client Secret хранится в Windows Credential Manager и не записывается в config.json."
+        ).pack(anchor="w", pady=(0, 8))
 
     def _lines(self, widget: tk.Text):
         return [x.strip() for x in widget.get("1.0","end").splitlines() if x.strip()]
@@ -141,7 +152,20 @@ class App(tk.Tk):
 
     def _load_cfg(self):
         self.client_id.set(self.cfg.get("client_id",""))
-        self.client_secret.set(self.cfg.get("client_secret",""))
+        legacy_secret = str(self.cfg.pop("_legacy_client_secret", "") or "")
+        try:
+            if legacy_secret:
+                write_client_secret(legacy_secret)
+                save_config(self.cfg)
+                secret = legacy_secret
+                self.status.set("Client Secret перенесён в Windows Credential Manager")
+            else:
+                secret = read_client_secret()
+            self.client_secret.set(secret)
+        except CredentialStoreError as e:
+            self.client_secret.set("")
+            self.status.set("Ошибка защищённого хранилища")
+            messagebox.showerror("Безопасность", str(e))
         self.genres.set(", ".join(self.cfg.get("genres", GENRES[:4])))
         self.poll.set(str(self.cfg.get("poll_minutes",15)))
         self.lookback.set(str(self.cfg.get("lookback_hours",24)))
@@ -172,12 +196,30 @@ class App(tk.Tk):
 
     def save(self):
         try:
-            self.cfg = self.collect_cfg()
+            cfg = self.collect_cfg()
+            secret = str(cfg.pop("client_secret", "") or "")
+            if secret:
+                write_client_secret(secret)
+            self.cfg = cfg
             save_config(self.cfg)
-            self.status.set("Настройки сохранены")
+            self.status.set("Настройки сохранены • Secret защищён Windows")
             self._refresh()
         except Exception as e:
             messagebox.showerror("Ошибка", str(e))
+
+    def delete_secret(self):
+        if not messagebox.askyesno(
+            "Удалить Client Secret",
+            "Удалить сохранённый Client Secret из Windows Credential Manager?"
+        ):
+            return
+        try:
+            delete_client_secret()
+            self.client_secret.set("")
+            self.status.set("Client Secret удалён")
+            messagebox.showinfo("Безопасность", "Client Secret удалён из Windows Credential Manager.")
+        except CredentialStoreError as e:
+            messagebox.showerror("Безопасность", str(e))
 
     def choose_dir(self):
         p = filedialog.askdirectory(initialdir=self.download_dir.get() or str(Path.home()))
