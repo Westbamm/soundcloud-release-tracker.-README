@@ -85,6 +85,12 @@ public partial class MainWindow : Window
     private async void TracksGrid_MouseDoubleClick(object sender, MouseButtonEventArgs e) =>
         await PreviewAsync();
 
+    private void TracksGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        var track = TracksGrid.SelectedItem as TrackEntry;
+        DownloadButton.IsEnabled = track?.Downloadable == true;
+    }
+
     private void FilterChanged(object sender, RoutedEventArgs e) => RefreshGrid();
     private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
     {
@@ -450,6 +456,7 @@ public partial class MainWindow : Window
             .ToList();
 
         TracksGrid.ItemsSource = rows;
+        DownloadButton.IsEnabled = (TracksGrid.SelectedItem as TrackEntry)?.Downloadable == true;
         TrackCountText.Text =
             $"{rows.Count} треков  •  {rows.Count(x => x.Downloadable)} доступны для официального скачивания";
     }
