@@ -189,13 +189,27 @@ class App(tk.Tk):
         return SoundCloudClient(cfg["client_id"], cfg["client_secret"])
 
     def test_api(self):
+        try:
+            cfg = self.collect_cfg()
+        except Exception as e:
+            messagebox.showerror("Настройки", str(e))
+            return
+        if not cfg.get("client_id") or not cfg.get("client_secret"):
+            messagebox.showwarning(
+                "SoundCloud API",
+                "Введите Client ID и Client Secret во вкладке «Настройки»."
+            )
+            return
+        self.status.set("Проверяю API…")
         def work():
             try:
-                c = self.client()
+                c = self.client(cfg)
                 c.search_tracks([], limit=1, max_pages=1)
+                self.after(0, lambda: self.status.set("API подключён"))
                 self.after(0, lambda: messagebox.showinfo("SoundCloud", "API подключён успешно."))
             except Exception as e:
-                self.after(0, lambda: messagebox.showerror("SoundCloud", str(e)))
+                msg = str(e)
+                self.after(0, lambda msg=msg: messagebox.showerror("SoundCloud", msg))
         threading.Thread(target=work, daemon=True).start()
 
     def check_now(self):
@@ -208,6 +222,14 @@ class App(tk.Tk):
         except Exception as e:
             messagebox.showerror("Настройки", str(e))
             return
+        if not cfg.get("client_id") or not cfg.get("client_secret"):
+            messagebox.showwarning(
+                "SoundCloud API",
+                "Сначала откройте вкладку «Настройки» и укажите Client ID и Client Secret SoundCloud."
+            )
+            self.status.set("Нужны API-ключи")
+            return
+
         self.busy = True
         self.status.set("Проверяю SoundCloud…")
 
@@ -219,6 +241,7 @@ class App(tk.Tk):
                 created = (datetime.now(timezone.utc)-timedelta(hours=cfg["lookback_hours"])).isoformat().replace("+00:00","Z")
                 seen = set()
                 for genre in cfg["genres"]:
+                    self.after(0, lambda genre=genre: self.status.set(f"Ищу: {genre}…"))
                     rule = cfg["genre_bpm_rules"].get(genre,{})
                     tracks = c.search_tracks([genre], created_from=created,
                                              bpm_from=rule.get("from"), bpm_to=rule.get("to"),
@@ -243,7 +266,8 @@ class App(tk.Tk):
                                     pass
                 self.after(0, lambda: self._done_check(new_count, downloaded))
             except Exception as e:
-                self.after(0, lambda: self._fail(str(e)))
+                msg = str(e)
+                self.after(0, lambda msg=msg: self._fail(msg))
         threading.Thread(target=work, daemon=True).start()
 
     def _done_check(self, n, d):
@@ -253,8 +277,9 @@ class App(tk.Tk):
 
     def _fail(self, msg):
         self.busy = False
-        self.status.set("Ошибка")
-        messagebox.showerror("Ошибка", msg)
+        short = msg.replace("\n", " ").strip()
+        self.status.set("Ошибка: " + (short[:90] + ("…" if len(short) > 90 else "")))
+        messagebox.showerror("SoundCloud", msg)
 
     def toggle_monitor(self):
         self.monitoring = not self.monitoring
@@ -316,7 +341,8 @@ class App(tk.Tk):
                 path = c.cache_preview(t, PREVIEW_CACHE_DIR)
                 self.after(0, lambda: self._play(path))
             except Exception as e:
-                self.after(0, lambda: self._fail(str(e)))
+                msg = str(e)
+                self.after(0, lambda msg=msg: self._fail(msg))
         threading.Thread(target=work, daemon=True).start()
 
     def _play(self, path):
@@ -354,7 +380,8 @@ class App(tk.Tk):
                 self.after(0, lambda: messagebox.showinfo("Готово", f"Сохранено:\n{result.path}"))
                 self.after(0, lambda: self.status.set("Трек скачан"))
             except Exception as e:
-                self.after(0, lambda: self._fail(str(e)))
+                msg = str(e)
+                self.after(0, lambda msg=msg: self._fail(msg))
         threading.Thread(target=work, daemon=True).start()
 
     def destroy(self):
