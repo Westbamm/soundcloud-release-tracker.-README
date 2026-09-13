@@ -86,7 +86,19 @@ public partial class MainWindow : Window
         await PreviewAsync();
 
     private void FilterChanged(object sender, RoutedEventArgs e) => RefreshGrid();
-    private void SearchBox_TextChanged(object sender, TextChangedEventArgs e) => RefreshGrid();
+    private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        var hasText = !string.IsNullOrWhiteSpace(SearchBox.Text);
+        SearchHint.Visibility = hasText ? Visibility.Collapsed : Visibility.Visible;
+        ClearSearchButton.IsEnabled = hasText;
+        RefreshGrid();
+    }
+
+    private void ClearSearch_Click(object sender, RoutedEventArgs e)
+    {
+        SearchBox.Clear();
+        SearchBox.Focus();
+    }
 
     private async void Connect_Click(object sender, RoutedEventArgs e)
     {
