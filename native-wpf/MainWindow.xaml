@@ -1,7 +1,7 @@
 <Window x:Class="SoundCloudReleaseTracker.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Release Radar v7.1"
+        Title="Release Radar v7.2"
         Width="1440" Height="900"
         MinWidth="1120" MinHeight="720"
         WindowStartupLocation="CenterScreen"
@@ -243,7 +243,7 @@
             </Grid.ColumnDefinitions>
             <StackPanel VerticalAlignment="Center">
                 <TextBlock Text="Release Radar" FontSize="29" FontWeight="SemiBold"/>
-                <TextBlock Text="SoundCloud release tracker  •  v7.1"
+                <TextBlock Text="SoundCloud release tracker  •  v7.2"
                            Foreground="{StaticResource Muted}"
                            FontSize="12"
                            Margin="1,2,0,0"/>
