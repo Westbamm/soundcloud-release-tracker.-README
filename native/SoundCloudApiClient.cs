@@ -18,7 +18,7 @@ internal sealed class SoundCloudApiClient
     {
         _clientId = clientId.Trim();
         _clientSecret = clientSecret.Trim();
-        _http.DefaultRequestHeaders.UserAgent.ParseAdd("SoundCloudReleaseTracker/5.1");
+        _http.DefaultRequestHeaders.UserAgent.ParseAdd("SoundCloudReleaseTracker/5.5");
     }
 
     public SoundCloudApiClient(
@@ -123,7 +123,7 @@ internal sealed class SoundCloudApiClient
             "linked_partitioning=true",
             $"limit={Math.Clamp(limit, 1, 200)}",
             "access=playable%2Cpreview",
-            $"created_at%5Bfrom%5D={Uri.EscapeDataString(createdFromUtc.ToString("yyyy-MM-ddTHH:mm:ssZ"))}"
+            $"created_at%5Bfrom%5D={Uri.EscapeDataString(createdFromUtc.ToString("yyyy-MM-dd HH:mm:ss"))}"
         };
         if (!string.IsNullOrWhiteSpace(genre))
             query.Add($"genres={Uri.EscapeDataString(genre)}");
