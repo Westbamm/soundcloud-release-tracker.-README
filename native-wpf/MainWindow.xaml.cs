@@ -375,6 +375,11 @@ public partial class MainWindow : Window
         DownloadToast.Visibility = Visibility.Collapsed;
     }
 
+    private void CloseErrorToast_Click(object sender, RoutedEventArgs e)
+    {
+        ErrorToast.Visibility = Visibility.Collapsed;
+    }
+
     private void OpenSelected()
     {
         var track = TracksGrid.SelectedItem as TrackEntry;
@@ -516,14 +521,11 @@ public partial class MainWindow : Window
 
     private void ShowError(string message)
     {
-        SetStatus("Ошибка: " + (message.Length > 100 ? message[..100] + "…" : message));
+        var shortMessage = message.Length > 180 ? message[..180] + "…" : message;
+        SetStatus("Ошибка: " + (shortMessage.Length > 100 ? shortMessage[..100] + "…" : shortMessage));
 
-        MessageBox.Show(
-            this,
-            message,
-            "Release Radar",
-            MessageBoxButton.OK,
-            MessageBoxImage.Error);
+        ErrorToastText.Text = shortMessage;
+        ErrorToast.Visibility = Visibility.Visible;
     }
 
     private static int ParseBoundedInt(string value, int fallback, int min, int max) =>
