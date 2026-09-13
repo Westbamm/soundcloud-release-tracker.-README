@@ -29,7 +29,7 @@ public sealed class MainForm : Form
 
     public MainForm()
     {
-        Text = "SoundCloud Release Tracker v5.4";
+        Text = "SoundCloud Release Tracker v5.5";
         Width = 1280;
         Height = 820;
         MinimumSize = new Size(1000, 650);
