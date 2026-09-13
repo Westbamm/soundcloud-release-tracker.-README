@@ -16,11 +16,19 @@ internal sealed class SoundCloudApiClient
     private DateTime _tokenExpiryUtc = DateTime.MinValue;
     private readonly bool _userTokenMode;
 
+    // Client-credentials tokens are shared by every API client instance in this process.
+    // UI actions create short-lived SoundCloudApiClient objects, so without this cache
+    // each click could unnecessarily hit /oauth/token and trigger SoundCloud rate limits.
+    private static readonly SemaphoreSlim ClientCredentialsLock = new(1, 1);
+    private static string SharedClientId = "";
+    private static string SharedAccessToken = "";
+    private static DateTime SharedTokenExpiryUtc = DateTime.MinValue;
+
     public SoundCloudApiClient(string clientId, string clientSecret)
     {
         _clientId = clientId.Trim();
         _clientSecret = clientSecret.Trim();
-        _http.DefaultRequestHeaders.UserAgent.ParseAdd("SoundCloudReleaseTracker/7.5");
+        _http.DefaultRequestHeaders.UserAgent.ParseAdd("SoundCloudReleaseTracker/7.7");
     }
 
     public SoundCloudApiClient(
@@ -39,28 +47,110 @@ internal sealed class SoundCloudApiClient
 
     private async Task<string> GetTokenAsync(CancellationToken ct)
     {
-        if (!string.IsNullOrWhiteSpace(_accessToken) && DateTime.UtcNow < _tokenExpiryUtc.AddMinutes(-1))
+        if (!string.IsNullOrWhiteSpace(_accessToken) &&
+            DateTime.UtcNow < _tokenExpiryUtc.AddMinutes(-1))
             return _accessToken;
 
         if (_userTokenMode && !string.IsNullOrWhiteSpace(_refreshToken))
             return await RefreshUserTokenAsync(ct);
 
-        using var content = new FormUrlEncodedContent(new Dictionary<string,string>
+        if (TryUseSharedClientToken())
+            return _accessToken;
+
+        await ClientCredentialsLock.WaitAsync(ct);
+        try
         {
-            ["grant_type"] = "client_credentials"
-        });
-        using var req = new HttpRequestMessage(HttpMethod.Post, "https://secure.soundcloud.com/oauth/token");
-        req.Content = content;
-        var basic = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{_clientId}:{_clientSecret}"));
-        req.Headers.Authorization = new AuthenticationHeaderValue("Basic", basic);
+            // Another action may have refreshed the shared token while we waited.
+            if (TryUseSharedClientToken())
+                return _accessToken;
 
-        using var resp = await _http.SendAsync(req, ct);
-        var body = await resp.Content.ReadAsStringAsync(ct);
-        if (!resp.IsSuccessStatusCode)
-            throw new InvalidOperationException($"SoundCloud OAuth {(int)resp.StatusCode}: {Trim(body)}");
+            for (var attempt = 0; attempt < 3; attempt++)
+            {
+                using var content = new FormUrlEncodedContent(new Dictionary<string, string>
+                {
+                    ["grant_type"] = "client_credentials"
+                });
+                using var req = new HttpRequestMessage(
+                    HttpMethod.Post,
+                    "https://secure.soundcloud.com/oauth/token");
+                req.Content = content;
 
-        StoreTokenResponse(body);
-        return _accessToken;
+                var basic = Convert.ToBase64String(
+                    Encoding.UTF8.GetBytes($"{_clientId}:{_clientSecret}"));
+                req.Headers.Authorization = new AuthenticationHeaderValue("Basic", basic);
+
+                using var resp = await _http.SendAsync(req, ct);
+                var body = await resp.Content.ReadAsStringAsync(ct);
+
+                if ((int)resp.StatusCode == 429)
+                {
+                    if (attempt < 2)
+                    {
+                        await Task.Delay(GetRetryDelay(resp, attempt), ct);
+                        continue;
+                    }
+
+                    throw new InvalidOperationException(
+                        "SoundCloud временно ограничил запросы авторизации. " +
+                        "Подожди около минуты и повтори действие.");
+                }
+
+                if (!resp.IsSuccessStatusCode)
+                    throw new InvalidOperationException(
+                        $"SoundCloud OAuth {(int)resp.StatusCode}: {Trim(body)}");
+
+                StoreTokenResponse(body);
+                SharedClientId = _clientId;
+                SharedAccessToken = _accessToken;
+                SharedTokenExpiryUtc = _tokenExpiryUtc;
+                return _accessToken;
+            }
+
+            throw new InvalidOperationException(
+                "Не удалось получить токен SoundCloud после нескольких попыток.");
+        }
+        finally
+        {
+            ClientCredentialsLock.Release();
+        }
+    }
+
+    private bool TryUseSharedClientToken()
+    {
+        if (!string.Equals(SharedClientId, _clientId, StringComparison.Ordinal) ||
+            string.IsNullOrWhiteSpace(SharedAccessToken) ||
+            DateTime.UtcNow >= SharedTokenExpiryUtc.AddMinutes(-1))
+            return false;
+
+        _accessToken = SharedAccessToken;
+        _tokenExpiryUtc = SharedTokenExpiryUtc;
+        return true;
+    }
+
+    private static TimeSpan GetRetryDelay(HttpResponseMessage response, int attempt)
+    {
+        var retryAfter = response.Headers.RetryAfter;
+        TimeSpan delay;
+
+        if (retryAfter?.Delta is TimeSpan delta)
+        {
+            delay = delta;
+        }
+        else if (retryAfter?.Date is DateTimeOffset date)
+        {
+            delay = date - DateTimeOffset.UtcNow;
+        }
+        else
+        {
+            delay = TimeSpan.FromSeconds(attempt == 0 ? 5 : 15);
+        }
+
+        if (delay < TimeSpan.FromSeconds(1))
+            delay = TimeSpan.FromSeconds(1);
+        if (delay > TimeSpan.FromSeconds(60))
+            delay = TimeSpan.FromSeconds(60);
+
+        return delay;
     }
 
     private async Task<string> RefreshUserTokenAsync(CancellationToken ct)
