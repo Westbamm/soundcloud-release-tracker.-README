@@ -64,8 +64,8 @@ class App(tk.Tk):
         ttk.Button(bar, text="Скачать", command=self.download).pack(side="left", padx=6)
         ttk.Button(bar, text="Открыть SoundCloud", command=self.open_sc).pack(side="left")
 
-        self.only_fav = tk.BooleanVar(False)
-        self.only_download = tk.BooleanVar(False)
+        self.only_fav = tk.BooleanVar(value=False)
+        self.only_download = tk.BooleanVar(value=False)
         ttk.Checkbutton(bar, text="★ Любимые", variable=self.only_fav, command=self._refresh).pack(side="right")
         ttk.Checkbutton(bar, text="Только download", variable=self.only_download, command=self._refresh).pack(side="right", padx=8)
 
@@ -102,7 +102,7 @@ class App(tk.Tk):
         self.poll = tk.StringVar(value="15")
         self.lookback = tk.StringVar(value="24")
         self.download_dir = tk.StringVar()
-        self.auto_download = tk.BooleanVar(False)
+        self.auto_download = tk.BooleanVar(value=False)
         fields = [
             ("Client ID", self.client_id, False),
             ("Client Secret", self.client_secret, True),
