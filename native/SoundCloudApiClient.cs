@@ -10,13 +10,29 @@ internal sealed class SoundCloudApiClient
     private readonly string _clientId;
     private readonly string _clientSecret;
     private string _accessToken = "";
+    private string _refreshToken = "";
     private DateTime _tokenExpiryUtc = DateTime.MinValue;
+    private readonly bool _userTokenMode;
 
     public SoundCloudApiClient(string clientId, string clientSecret)
     {
         _clientId = clientId.Trim();
         _clientSecret = clientSecret.Trim();
-        _http.DefaultRequestHeaders.UserAgent.ParseAdd("SoundCloudReleaseTracker/5.0");
+        _http.DefaultRequestHeaders.UserAgent.ParseAdd("SoundCloudReleaseTracker/5.1");
+    }
+
+    public SoundCloudApiClient(
+        string clientId,
+        string clientSecret,
+        string accessToken,
+        string refreshToken,
+        DateTime expiresUtc)
+        : this(clientId, clientSecret)
+    {
+        _accessToken = accessToken;
+        _refreshToken = refreshToken;
+        _tokenExpiryUtc = expiresUtc;
+        _userTokenMode = !string.IsNullOrWhiteSpace(accessToken);
     }
 
     private async Task<string> GetTokenAsync(CancellationToken ct)
@@ -24,21 +40,55 @@ internal sealed class SoundCloudApiClient
         if (!string.IsNullOrWhiteSpace(_accessToken) && DateTime.UtcNow < _tokenExpiryUtc.AddMinutes(-1))
             return _accessToken;
 
+        if (_userTokenMode && !string.IsNullOrWhiteSpace(_refreshToken))
+            return await RefreshUserTokenAsync(ct);
+
         using var content = new FormUrlEncodedContent(new Dictionary<string,string>
         {
-            ["grant_type"] = "client_credentials",
+            ["grant_type"] = "client_credentials"
+        });
+        using var req = new HttpRequestMessage(HttpMethod.Post, "https://secure.soundcloud.com/oauth/token");
+        req.Content = content;
+        var basic = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{_clientId}:{_clientSecret}"));
+        req.Headers.Authorization = new AuthenticationHeaderValue("Basic", basic);
+
+        using var resp = await _http.SendAsync(req, ct);
+        var body = await resp.Content.ReadAsStringAsync(ct);
+        if (!resp.IsSuccessStatusCode)
+            throw new InvalidOperationException($"SoundCloud OAuth {(int)resp.StatusCode}: {Trim(body)}");
+
+        StoreTokenResponse(body);
+        return _accessToken;
+    }
+
+    private async Task<string> RefreshUserTokenAsync(CancellationToken ct)
+    {
+        using var content = new FormUrlEncodedContent(new Dictionary<string,string>
+        {
+            ["grant_type"] = "refresh_token",
             ["client_id"] = _clientId,
-            ["client_secret"] = _clientSecret
+            ["client_secret"] = _clientSecret,
+            ["refresh_token"] = _refreshToken
         });
         using var resp = await _http.PostAsync("https://secure.soundcloud.com/oauth/token", content, ct);
         var body = await resp.Content.ReadAsStringAsync(ct);
         if (!resp.IsSuccessStatusCode)
-            throw new InvalidOperationException($"SoundCloud OAuth {(int)resp.StatusCode}: {Trim(body)}");
+            throw new InvalidOperationException($"SoundCloud refresh {(int)resp.StatusCode}: {Trim(body)}");
+
+        StoreTokenResponse(body);
+        return _accessToken;
+    }
+
+    private void StoreTokenResponse(string body)
+    {
         using var doc = JsonDocument.Parse(body);
         _accessToken = doc.RootElement.GetProperty("access_token").GetString() ?? "";
-        var expires = doc.RootElement.TryGetProperty("expires_in", out var ei) && ei.TryGetInt32(out var seconds) ? seconds : 3600;
+        if (doc.RootElement.TryGetProperty("refresh_token", out var rt))
+            _refreshToken = rt.GetString() ?? _refreshToken;
+        var expires = doc.RootElement.TryGetProperty("expires_in", out var ei) && ei.TryGetInt32(out var seconds)
+            ? seconds
+            : 3600;
         _tokenExpiryUtc = DateTime.UtcNow.AddSeconds(Math.Max(300, expires));
-        return _accessToken;
     }
 
     private async Task<JsonDocument> GetJsonAsync(string url, CancellationToken ct)
@@ -56,6 +106,14 @@ internal sealed class SoundCloudApiClient
 
     public async Task TestAsync(CancellationToken ct) =>
         _ = await SearchTracksAsync("", DateTime.UtcNow.AddHours(-1), null, null, 1, ct);
+
+    public async Task<string> GetAuthenticatedUsernameAsync(CancellationToken ct)
+    {
+        using var doc = await GetJsonAsync("https://api.soundcloud.com/me", ct);
+        return doc.RootElement.TryGetProperty("username", out var username)
+            ? username.GetString() ?? "SoundCloud user"
+            : "SoundCloud user";
+    }
 
     public async Task<List<TrackEntry>> SearchTracksAsync(
         string genre, DateTime createdFromUtc, int? bpmFrom, int? bpmTo, int limit, CancellationToken ct)
