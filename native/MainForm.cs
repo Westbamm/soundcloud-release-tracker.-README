@@ -8,29 +8,29 @@ public sealed class MainForm : Form
     private readonly TrackStore _store = new();
     private readonly MciPlayer _player = new();
 
-    private static readonly Color Bg = Color.FromArgb(15, 17, 21);
-    private static readonly Color Surface = Color.FromArgb(23, 26, 33);
-    private static readonly Color Surface2 = Color.FromArgb(29, 33, 42);
-    private static readonly Color Border = Color.FromArgb(48, 54, 65);
-    private static readonly Color TextPrimary = Color.FromArgb(244, 246, 248);
-    private static readonly Color TextMuted = Color.FromArgb(153, 163, 177);
+    private static readonly Color Bg = Color.FromArgb(18, 20, 24);
+    private static readonly Color NavBg = Color.FromArgb(23, 26, 32);
+    private static readonly Color Surface = Color.FromArgb(28, 32, 39);
+    private static readonly Color SurfaceAlt = Color.FromArgb(34, 39, 48);
+    private static readonly Color Border = Color.FromArgb(52, 59, 70);
+    private static readonly Color TextPrimary = Color.FromArgb(244, 246, 249);
+    private static readonly Color TextSecondary = Color.FromArgb(169, 178, 190);
     private static readonly Color Accent = Color.FromArgb(255, 85, 0);
-    private static readonly Color AccentHover = Color.FromArgb(255, 108, 31);
-    private static readonly Color Success = Color.FromArgb(58, 203, 132);
-    private static readonly Color Danger = Color.FromArgb(238, 91, 91);
+    private static readonly Color AccentHover = Color.FromArgb(255, 110, 35);
+    private static readonly Color Success = Color.FromArgb(57, 201, 133);
+    private static readonly Color Danger = Color.FromArgb(235, 91, 91);
 
-    private readonly Panel _contentHost = new() { Dock = DockStyle.Fill };
-    private readonly Panel _tracksPage = new() { Dock = DockStyle.Fill };
-    private readonly Panel _artistsPage = new() { Dock = DockStyle.Fill, Visible = false };
-    private readonly Panel _settingsPage = new() { Dock = DockStyle.Fill, Visible = false };
+    private readonly Panel _tracksPage = new() { Dock = DockStyle.Fill, BackColor = Bg };
+    private readonly Panel _artistsPage = new() { Dock = DockStyle.Fill, BackColor = Bg, Visible = false };
+    private readonly Panel _settingsPage = new() { Dock = DockStyle.Fill, BackColor = Bg, Visible = false };
 
     private readonly DataGridView _grid = new()
     {
         Dock = DockStyle.Fill,
         ReadOnly = true,
-        SelectionMode = DataGridViewSelectionMode.FullRowSelect,
         AutoGenerateColumns = false,
         MultiSelect = false,
+        SelectionMode = DataGridViewSelectionMode.FullRowSelect,
         AllowUserToAddRows = false,
         AllowUserToDeleteRows = false,
         AllowUserToResizeRows = false,
@@ -42,33 +42,31 @@ public sealed class MainForm : Form
 
     private readonly Label _status = new()
     {
-        AutoSize = true,
+        Dock = DockStyle.Fill,
+        TextAlign = ContentAlignment.MiddleLeft,
         Text = "Готово",
-        ForeColor = TextMuted,
-        Font = new Font("Segoe UI", 9)
-    };
-
-    private readonly Label _trackCount = new()
-    {
-        AutoSize = true,
-        ForeColor = TextMuted,
+        ForeColor = TextSecondary,
         Font = new Font("Segoe UI", 9)
     };
 
     private readonly Label _connectionBadge = new()
     {
-        AutoSize = true,
-        Text = "●  SoundCloud не подключён",
+        Dock = DockStyle.Fill,
+        TextAlign = ContentAlignment.MiddleRight,
+        Text = "SoundCloud не подключён",
         ForeColor = Danger,
-        Font = new Font("Segoe UI Semibold", 9)
+        Font = new Font("Segoe UI Semibold", 9.5f)
     };
 
-    private readonly TextBox _clientId = new()
+    private readonly Label _trackCount = new()
     {
-        ReadOnly = true,
-        BorderStyle = BorderStyle.FixedSingle
+        Dock = DockStyle.Fill,
+        TextAlign = ContentAlignment.MiddleLeft,
+        ForeColor = TextSecondary,
+        Font = new Font("Segoe UI", 9)
     };
 
+    private readonly TextBox _clientId = new() { ReadOnly = true };
     private readonly TextBox _genres = new();
     private readonly NumericUpDown _poll = new() { Minimum = 1, Maximum = 1440, Value = 15 };
     private readonly NumericUpDown _lookback = new() { Minimum = 1, Maximum = 720, Value = 24 };
@@ -79,56 +77,33 @@ public sealed class MainForm : Form
         AutoSize = true
     };
 
-    private readonly TextBox _favorites = new()
-    {
-        Multiline = true,
-        ScrollBars = ScrollBars.Vertical,
-        Dock = DockStyle.Fill,
-        BorderStyle = BorderStyle.None
-    };
+    private readonly TextBox _favorites = new() { Multiline = true, ScrollBars = ScrollBars.Vertical, Dock = DockStyle.Fill };
+    private readonly TextBox _blacklist = new() { Multiline = true, ScrollBars = ScrollBars.Vertical, Dock = DockStyle.Fill };
+    private readonly TextBox _bpmRules = new() { Multiline = true, ScrollBars = ScrollBars.Vertical, Dock = DockStyle.Fill };
 
-    private readonly TextBox _blacklist = new()
-    {
-        Multiline = true,
-        ScrollBars = ScrollBars.Vertical,
-        Dock = DockStyle.Fill,
-        BorderStyle = BorderStyle.None
-    };
-
-    private readonly TextBox _bpmRules = new()
-    {
-        Multiline = true,
-        ScrollBars = ScrollBars.Vertical,
-        Dock = DockStyle.Fill,
-        BorderStyle = BorderStyle.None
-    };
-
-    private readonly CheckBox _onlyFavorites = new() { Text = "★ Любимые", AutoSize = true };
+    private readonly CheckBox _onlyFavorites = new() { Text = "Только любимые", AutoSize = true };
     private readonly CheckBox _onlyDownload = new() { Text = "Только download", AutoSize = true };
-    private readonly TextBox _searchBox = new()
-    {
-        Width = 240,
-        PlaceholderText = "Поиск по артисту или названию…"
-    };
+    private readonly TextBox _searchBox = new() { PlaceholderText = "Поиск по артисту, названию или жанру…" };
 
     private readonly Button _monitorButton = new();
     private Button? _navTracks;
     private Button? _navArtists;
     private Button? _navSettings;
+    private Label? _settingsConnectionStatus;
 
     private readonly System.Windows.Forms.Timer _timer = new();
     private bool _busy;
 
     public MainForm()
     {
-        Text = "Release Radar v6.0";
-        Width = 1440;
-        Height = 900;
-        MinimumSize = new Size(1100, 700);
+        Text = "Release Radar v6.1";
+        Width = 1380;
+        Height = 860;
+        MinimumSize = new Size(1080, 680);
+        StartPosition = FormStartPosition.CenterScreen;
         BackColor = Bg;
         ForeColor = TextPrimary;
         Font = new Font("Segoe UI", 10);
-        StartPosition = FormStartPosition.CenterScreen;
 
         _cfg = AppConfig.Load();
         AppConfig.TryMigrateLegacyPlaintextSecret();
@@ -144,62 +119,61 @@ public sealed class MainForm : Form
 
     private void BuildUi()
     {
-        SuspendLayout();
-
         var root = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             RowCount = 3,
+            ColumnCount = 1,
             BackColor = Bg,
-            Padding = new Padding(0)
+            Margin = Padding.Empty,
+            Padding = Padding.Empty
         };
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 92));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 74));
         root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 36));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
 
         root.Controls.Add(BuildHeader(), 0, 0);
         root.Controls.Add(BuildBody(), 0, 1);
         root.Controls.Add(BuildFooter(), 0, 2);
-
         Controls.Add(root);
-        ResumeLayout(true);
     }
 
     private Control BuildHeader()
     {
-        var header = new Panel
+        var header = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
+            ColumnCount = 2,
             BackColor = Bg,
-            Padding = new Padding(28, 18, 28, 12)
+            Padding = new Padding(24, 12, 24, 8)
         };
+        header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 70));
+        header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 30));
 
-        var title = new Label
+        var left = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2, BackColor = Bg };
+        left.RowStyles.Add(new RowStyle(SizeType.Percent, 62));
+        left.RowStyles.Add(new RowStyle(SizeType.Percent, 38));
+
+        left.Controls.Add(new Label
         {
+            Dock = DockStyle.Fill,
             Text = "Release Radar",
-            AutoSize = true,
+            TextAlign = ContentAlignment.BottomLeft,
             ForeColor = TextPrimary,
-            Font = new Font("Segoe UI Semibold", 24, FontStyle.Bold),
-            Location = new Point(28, 16)
-        };
+            Font = new Font("Segoe UI Semibold", 21, FontStyle.Bold)
+        }, 0, 0);
 
-        var subtitle = new Label
+        left.Controls.Add(new Label
         {
-            Text = "SoundCloud release tracker  •  v6.0",
-            AutoSize = true,
-            ForeColor = TextMuted,
-            Font = new Font("Segoe UI", 9.5f),
-            Location = new Point(31, 58)
-        };
+            Dock = DockStyle.Fill,
+            Text = "SoundCloud release tracker  •  v6.1",
+            TextAlign = ContentAlignment.TopLeft,
+            ForeColor = TextSecondary,
+            Font = new Font("Segoe UI", 9)
+        }, 0, 1);
 
-        _connectionBadge.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-        _connectionBadge.Location = new Point(Width - 280, 34);
-        header.Resize += (_, _) =>
-            _connectionBadge.Location = new Point(Math.Max(700, header.ClientSize.Width - _connectionBadge.Width - 30), 34);
-
-        header.Controls.Add(title);
-        header.Controls.Add(subtitle);
-        header.Controls.Add(_connectionBadge);
+        header.Controls.Add(left, 0, 0);
+        header.Controls.Add(_connectionBadge, 1, 0);
         return header;
     }
 
@@ -210,89 +184,89 @@ public sealed class MainForm : Form
             Dock = DockStyle.Fill,
             ColumnCount = 2,
             BackColor = Bg,
-            Padding = new Padding(18, 0, 18, 14)
+            Padding = new Padding(18, 0, 18, 12)
         };
-        body.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 205));
+        body.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 190));
         body.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
         body.Controls.Add(BuildSidebar(), 0, 0);
 
-        _contentHost.BackColor = Bg;
-        _contentHost.Padding = new Padding(14, 0, 0, 0);
+        var host = new Panel
+        {
+            Dock = DockStyle.Fill,
+            BackColor = Bg,
+            Padding = new Padding(18, 0, 0, 0)
+        };
 
         BuildTracksPage();
         BuildArtistsPage();
         BuildSettingsPage();
 
-        _contentHost.Controls.Add(_settingsPage);
-        _contentHost.Controls.Add(_artistsPage);
-        _contentHost.Controls.Add(_tracksPage);
+        host.Controls.Add(_settingsPage);
+        host.Controls.Add(_artistsPage);
+        host.Controls.Add(_tracksPage);
 
-        body.Controls.Add(_contentHost, 1, 0);
+        body.Controls.Add(host, 1, 0);
         return body;
     }
 
     private Control BuildSidebar()
     {
-        var sidebar = new Panel
+        var sidebar = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            BackColor = Surface,
-            Padding = new Padding(10, 16, 10, 16)
+            RowCount = 5,
+            BackColor = NavBg,
+            Padding = new Padding(10, 14, 10, 14)
         };
+        sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
+        sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
+        sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
+        sidebar.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        sidebar.RowStyles.Add(new RowStyle(SizeType.Absolute, 70));
 
-        var stack = new FlowLayoutPanel
+        _navTracks = NavButton("Новые треки", true, (_, _) => ShowPage(_tracksPage, _navTracks!));
+        _navArtists = NavButton("Артисты и BPM", false, (_, _) => ShowPage(_artistsPage, _navArtists!));
+        _navSettings = NavButton("Настройки", false, (_, _) => ShowPage(_settingsPage, _navSettings!));
+
+        sidebar.Controls.Add(_navTracks, 0, 0);
+        sidebar.Controls.Add(_navArtists, 0, 1);
+        sidebar.Controls.Add(_navSettings, 0, 2);
+
+        sidebar.Controls.Add(new Label
         {
-            Dock = DockStyle.Top,
-            FlowDirection = FlowDirection.TopDown,
-            WrapContents = false,
-            AutoSize = true,
-            BackColor = Surface
-        };
-
-        _navTracks = NavButton("  Новые треки", true, (_, _) => ShowPage(_tracksPage, _navTracks!));
-        _navArtists = NavButton("  Артисты и BPM", false, (_, _) => ShowPage(_artistsPage, _navArtists!));
-        _navSettings = NavButton("  Настройки", false, (_, _) => ShowPage(_settingsPage, _navSettings!));
-
-        stack.Controls.Add(_navTracks);
-        stack.Controls.Add(_navArtists);
-        stack.Controls.Add(_navSettings);
-
-        var hint = new Label
-        {
-            Text = "Автоматический мониторинг\nновых релизов по жанрам",
-            AutoSize = true,
-            ForeColor = TextMuted,
+            Dock = DockStyle.Fill,
+            Text = "Мониторинг новых релизов\nпо жанрам и BPM",
+            TextAlign = ContentAlignment.BottomLeft,
+            ForeColor = TextSecondary,
             Font = new Font("Segoe UI", 8.5f),
-            Location = new Point(18, 250)
-        };
+            Padding = new Padding(8, 0, 0, 6)
+        }, 0, 4);
 
-        sidebar.Controls.Add(stack);
-        sidebar.Controls.Add(hint);
         return sidebar;
     }
 
-    private Button NavButton(string text, bool active, EventHandler click)
+    private Button NavButton(string text, bool active, EventHandler handler)
     {
         var b = new Button
         {
+            Dock = DockStyle.Fill,
             Text = text,
-            Width = 175,
-            Height = 46,
-            FlatStyle = FlatStyle.Flat,
-            FlatAppearance = { BorderSize = 0 },
             TextAlign = ContentAlignment.MiddleLeft,
+            Padding = new Padding(14, 0, 0, 0),
+            FlatStyle = FlatStyle.Flat,
+            BackColor = active ? SurfaceAlt : NavBg,
+            ForeColor = active ? TextPrimary : TextSecondary,
             Font = new Font("Segoe UI Semibold", 10),
-            ForeColor = active ? TextPrimary : TextMuted,
-            BackColor = active ? Surface2 : Surface,
             Cursor = Cursors.Hand,
-            Margin = new Padding(0, 0, 0, 6)
+            Margin = new Padding(0, 0, 0, 4)
         };
-        b.Click += click;
+        b.FlatAppearance.BorderSize = 0;
+        b.Click += handler;
         return b;
     }
 
-    private void ShowPage(Panel page, Button activeButton)
+    private void ShowPage(Panel page, Button active)
     {
         _tracksPage.Visible = false;
         _artistsPage.Visible = false;
@@ -300,86 +274,136 @@ public sealed class MainForm : Form
         page.Visible = true;
         page.BringToFront();
 
-        foreach (var b in new[] { _navTracks, _navArtists, _navSettings }.Where(x => x is not null))
+        foreach (var b in new[] { _navTracks, _navArtists, _navSettings })
         {
-            b!.BackColor = ReferenceEquals(b, activeButton) ? Surface2 : Surface;
-            b.ForeColor = ReferenceEquals(b, activeButton) ? TextPrimary : TextMuted;
+            if (b is null) continue;
+            var selected = ReferenceEquals(b, active);
+            b.BackColor = selected ? SurfaceAlt : NavBg;
+            b.ForeColor = selected ? TextPrimary : TextSecondary;
         }
     }
 
     private void BuildTracksPage()
     {
-        _tracksPage.BackColor = Bg;
-        _tracksPage.Padding = new Padding(0);
-
         var layout = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            RowCount = 3,
+            RowCount = 4,
+            ColumnCount = 1,
             BackColor = Bg
         };
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 72));
-        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 54));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 68));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 50));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 50));
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
-        var heading = new Panel { Dock = DockStyle.Fill, BackColor = Bg };
-        var title = new Label
-        {
-            Text = "Новые треки",
-            AutoSize = true,
-            ForeColor = TextPrimary,
-            Font = new Font("Segoe UI Semibold", 18, FontStyle.Bold),
-            Location = new Point(2, 5)
-        };
-        _trackCount.Location = new Point(4, 42);
-        heading.Controls.Add(title);
-        heading.Controls.Add(_trackCount);
+        layout.Controls.Add(BuildPageTitle("Новые треки", _trackCount), 0, 0);
+        layout.Controls.Add(BuildTrackActions(), 0, 1);
+        layout.Controls.Add(BuildTrackFilters(), 0, 2);
 
-        var toolbar = new FlowLayoutPanel
+        var gridCard = new Panel
         {
             Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = false,
-            BackColor = Bg,
-            Padding = new Padding(0, 4, 0, 6)
+            BackColor = Surface,
+            Padding = new Padding(1),
+            Margin = new Padding(0, 8, 0, 0)
         };
+        ConfigureGrid();
+        gridCard.Controls.Add(_grid);
+        layout.Controls.Add(gridCard, 0, 3);
 
-        toolbar.Controls.Add(ActionButton("↻  Проверить сейчас", true, async (_, _) => await CheckNowAsync()));
+        _tracksPage.Controls.Add(layout);
+    }
 
-        _monitorButton.Text = "▶  Мониторинг";
-        StyleActionButton(_monitorButton, false);
+    private Control BuildPageTitle(string title, Label subtitle)
+    {
+        var panel = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            RowCount = 2,
+            BackColor = Bg
+        };
+        panel.RowStyles.Add(new RowStyle(SizeType.Percent, 60));
+        panel.RowStyles.Add(new RowStyle(SizeType.Percent, 40));
+
+        panel.Controls.Add(new Label
+        {
+            Dock = DockStyle.Fill,
+            Text = title,
+            TextAlign = ContentAlignment.BottomLeft,
+            ForeColor = TextPrimary,
+            Font = new Font("Segoe UI Semibold", 17, FontStyle.Bold)
+        }, 0, 0);
+
+        panel.Controls.Add(subtitle, 0, 1);
+        return panel;
+    }
+
+    private Control BuildTrackActions()
+    {
+        var table = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 6,
+            BackColor = Bg,
+            Margin = Padding.Empty
+        };
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 160));
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 145));
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 125));
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 120));
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+
+        table.Controls.Add(ActionButton("Проверить сейчас", true, async (_, _) => await CheckNowAsync()), 0, 0);
+
+        _monitorButton.Text = "Мониторинг";
+        StyleButton(_monitorButton, false);
         _monitorButton.Click += (_, _) => ToggleMonitoring();
-        toolbar.Controls.Add(_monitorButton);
+        table.Controls.Add(_monitorButton, 1, 0);
 
-        toolbar.Controls.Add(ActionButton("▶  Preview", false, async (_, _) => await PreviewAsync()));
-        toolbar.Controls.Add(ActionButton("■  Stop", false, (_, _) =>
+        table.Controls.Add(ActionButton("Preview", false, async (_, _) => await PreviewAsync()), 2, 0);
+        table.Controls.Add(ActionButton("Stop", false, (_, _) =>
         {
             _player.Stop();
             SetStatus("Preview остановлен");
-        }));
-        toolbar.Controls.Add(ActionButton("↓  Скачать", false, async (_, _) => await DownloadSelectedAsync()));
-        toolbar.Controls.Add(ActionButton("↗  Открыть", false, (_, _) => OpenSelected()));
+        }), 3, 0);
+        table.Controls.Add(ActionButton("Скачать", false, async (_, _) => await DownloadSelectedAsync()), 4, 0);
+        table.Controls.Add(ActionButton("Открыть в SoundCloud", false, (_, _) => OpenSelected()), 5, 0);
+
+        return table;
+    }
+
+    private Control BuildTrackFilters()
+    {
+        var table = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 4,
+            BackColor = Bg
+        };
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        table.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 270));
 
         StyleCheck(_onlyFavorites);
         StyleCheck(_onlyDownload);
+        StyleTextBox(_searchBox);
+
         _onlyFavorites.CheckedChanged += (_, _) => RefreshGrid();
         _onlyDownload.CheckedChanged += (_, _) => RefreshGrid();
-        toolbar.Controls.Add(_onlyFavorites);
-        toolbar.Controls.Add(_onlyDownload);
-
-        StyleTextBox(_searchBox);
         _searchBox.TextChanged += (_, _) => RefreshGrid();
-        toolbar.Controls.Add(_searchBox);
 
-        ConfigureGrid();
-        var gridCard = Card();
-        gridCard.Padding = new Padding(1);
-        gridCard.Controls.Add(_grid);
+        table.Controls.Add(_onlyFavorites, 0, 0);
+        table.Controls.Add(_onlyDownload, 1, 0);
+        table.Controls.Add(new Panel { Dock = DockStyle.Fill, BackColor = Bg }, 2, 0);
 
-        layout.Controls.Add(heading, 0, 0);
-        layout.Controls.Add(toolbar, 0, 1);
-        layout.Controls.Add(gridCard, 0, 2);
-        _tracksPage.Controls.Add(layout);
+        _searchBox.Dock = DockStyle.Fill;
+        _searchBox.Margin = new Padding(0, 8, 0, 8);
+        table.Controls.Add(_searchBox, 3, 0);
+
+        return table;
     }
 
     private void ConfigureGrid()
@@ -387,52 +411,35 @@ public sealed class MainForm : Form
         _grid.EnableHeadersVisualStyles = false;
         _grid.ColumnHeadersBorderStyle = DataGridViewHeaderBorderStyle.None;
         _grid.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
-        _grid.ColumnHeadersHeight = 44;
+        _grid.ColumnHeadersHeight = 42;
         _grid.RowTemplate.Height = 38;
+
         _grid.DefaultCellStyle.BackColor = Surface;
         _grid.DefaultCellStyle.ForeColor = TextPrimary;
-        _grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(84, 43, 27);
+        _grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(92, 49, 28);
         _grid.DefaultCellStyle.SelectionForeColor = Color.White;
         _grid.DefaultCellStyle.Padding = new Padding(8, 0, 8, 0);
         _grid.DefaultCellStyle.Font = new Font("Segoe UI", 9.5f);
-        _grid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(26, 30, 38);
-        _grid.ColumnHeadersDefaultCellStyle.BackColor = Surface2;
-        _grid.ColumnHeadersDefaultCellStyle.ForeColor = TextMuted;
+
+        _grid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(31, 35, 43);
+
+        _grid.ColumnHeadersDefaultCellStyle.BackColor = SurfaceAlt;
+        _grid.ColumnHeadersDefaultCellStyle.ForeColor = TextSecondary;
         _grid.ColumnHeadersDefaultCellStyle.Font = new Font("Segoe UI Semibold", 9);
         _grid.ColumnHeadersDefaultCellStyle.Padding = new Padding(8, 0, 8, 0);
 
         _grid.Columns.Clear();
-        _grid.Columns.Add(new DataGridViewTextBoxColumn
-        {
-            HeaderText = "ДАТА",
-            DataPropertyName = "CreatedAt",
-            Width = 155
-        });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn
-        {
-            HeaderText = "АРТИСТ",
-            DataPropertyName = "Artist",
-            Width = 210
-        });
+        _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "ДАТА", DataPropertyName = "CreatedAt", Width = 150 });
+        _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "АРТИСТ", DataPropertyName = "Artist", Width = 200 });
         _grid.Columns.Add(new DataGridViewTextBoxColumn
         {
             HeaderText = "НАЗВАНИЕ",
             DataPropertyName = "Title",
             AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
-            MinimumWidth = 300
+            MinimumWidth = 320
         });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn
-        {
-            HeaderText = "ЖАНР",
-            DataPropertyName = "Genre",
-            Width = 145
-        });
-        _grid.Columns.Add(new DataGridViewTextBoxColumn
-        {
-            HeaderText = "BPM",
-            DataPropertyName = "Bpm",
-            Width = 70
-        });
+        _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "ЖАНР", DataPropertyName = "Genre", Width = 140 });
+        _grid.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "BPM", DataPropertyName = "Bpm", Width = 70 });
         _grid.Columns.Add(new DataGridViewCheckBoxColumn
         {
             HeaderText = "DOWNLOAD",
@@ -446,225 +453,270 @@ public sealed class MainForm : Form
 
     private void BuildArtistsPage()
     {
-        _artistsPage.BackColor = Bg;
-
-        var root = new TableLayoutPanel
+        var layout = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             RowCount = 3,
+            ColumnCount = 1,
             BackColor = Bg
         };
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 72));
-        root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 62));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 68));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 56));
 
-        root.Controls.Add(PageHeading("Артисты и BPM", "Управляй любимыми артистами, blacklist и BPM-правилами"), 0, 0);
+        var subtitle = new Label
+        {
+            Dock = DockStyle.Fill,
+            Text = "Любимые артисты, blacklist и BPM-правила",
+            TextAlign = ContentAlignment.MiddleLeft,
+            ForeColor = TextSecondary
+        };
+        layout.Controls.Add(BuildPageTitle("Артисты и BPM", subtitle), 0, 0);
 
-        var cards = new TableLayoutPanel
+        var editors = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 3,
-            BackColor = Bg
+            BackColor = Bg,
+            Padding = new Padding(0, 8, 0, 0)
         };
-        cards.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
-        cards.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33f));
-        cards.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.34f));
+        editors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.333f));
+        editors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.333f));
+        editors.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.334f));
 
         StyleEditor(_favorites);
         StyleEditor(_blacklist);
         StyleEditor(_bpmRules);
 
-        cards.Controls.Add(EditorCard("★  Любимые артисты", "Один артист на строку", _favorites), 0, 0);
-        cards.Controls.Add(EditorCard("⛔  Blacklist", "Не показывать этих артистов", _blacklist), 1, 0);
-        cards.Controls.Add(EditorCard("♬  BPM-правила", "Например: House=122-132", _bpmRules), 2, 0);
+        editors.Controls.Add(EditorCard("Любимые артисты", "Один артист на строку", _favorites), 0, 0);
+        editors.Controls.Add(EditorCard("Blacklist", "Не показывать этих артистов", _blacklist), 1, 0);
+        editors.Controls.Add(EditorCard("BPM-правила", "Пример: House=122-132", _bpmRules), 2, 0);
 
-        var footer = new FlowLayoutPanel
+        layout.Controls.Add(editors, 0, 1);
+
+        var bottom = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, BackColor = Bg };
+        bottom.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        bottom.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 190));
+        bottom.Controls.Add(ActionButton("Сохранить изменения", true, (_, _) => SaveSettings()), 1, 0);
+        layout.Controls.Add(bottom, 0, 2);
+
+        _artistsPage.Controls.Add(layout);
+    }
+
+    private Control EditorCard(string title, string hint, TextBox editor)
+    {
+        var card = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.RightToLeft,
-            BackColor = Bg,
-            Padding = new Padding(0, 12, 0, 0)
+            RowCount = 3,
+            BackColor = Surface,
+            Padding = new Padding(16),
+            Margin = new Padding(0, 0, 12, 0)
         };
-        footer.Controls.Add(ActionButton("Сохранить изменения", true, (_, _) => SaveSettings()));
+        card.RowStyles.Add(new RowStyle(SizeType.Absolute, 28));
+        card.RowStyles.Add(new RowStyle(SizeType.Absolute, 28));
+        card.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
-        root.Controls.Add(cards, 0, 1);
-        root.Controls.Add(footer, 0, 2);
-        _artistsPage.Controls.Add(root);
+        card.Controls.Add(new Label
+        {
+            Dock = DockStyle.Fill,
+            Text = title,
+            TextAlign = ContentAlignment.MiddleLeft,
+            ForeColor = TextPrimary,
+            Font = new Font("Segoe UI Semibold", 11)
+        }, 0, 0);
+
+        card.Controls.Add(new Label
+        {
+            Dock = DockStyle.Fill,
+            Text = hint,
+            TextAlign = ContentAlignment.TopLeft,
+            ForeColor = TextSecondary,
+            Font = new Font("Segoe UI", 8.5f)
+        }, 0, 1);
+
+        editor.Margin = new Padding(0, 8, 0, 0);
+        card.Controls.Add(editor, 0, 2);
+        return card;
     }
 
     private void BuildSettingsPage()
     {
-        _settingsPage.BackColor = Bg;
-
-        var root = new TableLayoutPanel
+        var layout = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
-            RowCount = 3,
-            BackColor = Bg,
-            AutoScroll = true
+            RowCount = 4,
+            ColumnCount = 1,
+            BackColor = Bg
         };
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 72));
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 68));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 180));
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 330));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
-        root.Controls.Add(PageHeading("Настройки", "Подключение SoundCloud и параметры мониторинга"), 0, 0);
-
-        var stack = new FlowLayoutPanel
+        var subtitle = new Label
         {
             Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.TopDown,
-            WrapContents = false,
-            AutoScroll = true,
-            BackColor = Bg,
-            Padding = new Padding(0, 4, 4, 20)
+            Text = "Подключение SoundCloud и параметры мониторинга",
+            TextAlign = ContentAlignment.MiddleLeft,
+            ForeColor = TextSecondary
         };
+        layout.Controls.Add(BuildPageTitle("Настройки", subtitle), 0, 0);
+        layout.Controls.Add(BuildConnectionCard(), 0, 1);
+        layout.Controls.Add(BuildMonitoringCard(), 0, 2);
 
-        stack.Controls.Add(BuildConnectionCard());
-        stack.Controls.Add(BuildMonitoringCard());
-
-        root.Controls.Add(stack, 0, 1);
-        _settingsPage.Controls.Add(root);
+        _settingsPage.Controls.Add(layout);
     }
 
     private Control BuildConnectionCard()
     {
-        var card = Card(920, 185);
-        card.Margin = new Padding(0, 0, 0, 14);
-
-        var title = CardTitle("Подключение SoundCloud", 22, 18);
-        var desc = new Label
+        var card = new TableLayoutPanel
         {
-            Text = "Подключение проходит через официальный сайт. Пароль приложение не получает.",
-            AutoSize = true,
-            ForeColor = TextMuted,
-            Location = new Point(22, 49)
+            Dock = DockStyle.Fill,
+            RowCount = 4,
+            ColumnCount = 3,
+            BackColor = Surface,
+            Padding = new Padding(18),
+            Margin = new Padding(0, 8, 0, 10)
         };
+        card.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));
+        card.RowStyles.Add(new RowStyle(SizeType.Absolute, 28));
+        card.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
+        card.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
-        var status = new Label
+        card.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        card.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
+        card.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 120));
+
+        card.Controls.Add(new Label
         {
-            Text = string.IsNullOrWhiteSpace(_cfg.ClientId) ? "●  Не подключено" : "●  Подключено",
-            AutoSize = true,
-            ForeColor = string.IsNullOrWhiteSpace(_cfg.ClientId) ? Danger : Success,
-            Font = new Font("Segoe UI Semibold", 10),
-            Location = new Point(22, 83)
-        };
-        _loginStatusProxy = status;
+            Dock = DockStyle.Fill,
+            Text = "Подключение SoundCloud",
+            TextAlign = ContentAlignment.MiddleLeft,
+            ForeColor = TextPrimary,
+            Font = new Font("Segoe UI Semibold", 11)
+        }, 0, 0);
+        card.SetColumnSpan(card.GetControlFromPosition(0, 0)!, 3);
 
-        _clientId.Width = 420;
-        _clientId.Location = new Point(22, 115);
+        _settingsConnectionStatus = new Label
+        {
+            Dock = DockStyle.Fill,
+            TextAlign = ContentAlignment.MiddleLeft,
+            ForeColor = TextSecondary,
+            Font = new Font("Segoe UI", 9)
+        };
+        card.Controls.Add(_settingsConnectionStatus, 0, 1);
+        card.SetColumnSpan(_settingsConnectionStatus, 3);
+
         StyleTextBox(_clientId);
+        _clientId.Dock = DockStyle.Fill;
+        _clientId.Margin = new Padding(0, 4, 12, 4);
         _clientId.PlaceholderText = "Client ID появится автоматически";
+        card.Controls.Add(_clientId, 0, 2);
 
-        var connect = ActionButton("Подключить SoundCloud", true, async (_, _) => await AutoConnectSoundCloudAsync());
-        connect.Location = new Point(465, 111);
-        connect.Width = 190;
+        card.Controls.Add(ActionButton("Подключить", true, async (_, _) => await AutoConnectSoundCloudAsync()), 1, 2);
+        card.Controls.Add(ActionButton("Проверить API", false, async (_, _) => await TestApiAsync()), 2, 2);
 
-        var test = ActionButton("Проверить API", false, async (_, _) => await TestApiAsync());
-        test.Location = new Point(665, 111);
-        test.Width = 135;
+        card.Controls.Add(new Label
+        {
+            Dock = DockStyle.Fill,
+            Text = "Пароль вводится только на официальном сайте. Client Secret хранится в Windows Credential Manager.",
+            TextAlign = ContentAlignment.MiddleLeft,
+            ForeColor = TextSecondary,
+            Font = new Font("Segoe UI", 8.5f)
+        }, 0, 3);
 
         var disconnect = ActionButton("Отключить", false, (_, _) => DeleteSecret());
-        disconnect.Location = new Point(810, 111);
-        disconnect.Width = 95;
-
-        card.Controls.Add(title);
-        card.Controls.Add(desc);
-        card.Controls.Add(status);
-        card.Controls.Add(_clientId);
-        card.Controls.Add(connect);
-        card.Controls.Add(test);
-        card.Controls.Add(disconnect);
+        disconnect.Dock = DockStyle.Right;
+        card.Controls.Add(disconnect, 2, 3);
 
         return card;
     }
 
-    private Label? _loginStatusProxy;
-
     private Control BuildMonitoringCard()
     {
-        var card = Card(920, 355);
-
-        var title = CardTitle("Мониторинг", 22, 18);
-        var desc = new Label
+        var card = new TableLayoutPanel
         {
-            Text = "Жанры, частота проверки и папка для разрешённых загрузок.",
-            AutoSize = true,
-            ForeColor = TextMuted,
-            Location = new Point(22, 49)
-        };
-
-        card.Controls.Add(title);
-        card.Controls.Add(desc);
-
-        var form = new TableLayoutPanel
-        {
-            Location = new Point(22, 86),
-            Size = new Size(875, 205),
+            Dock = DockStyle.Fill,
+            RowCount = 7,
             ColumnCount = 3,
-            RowCount = 5,
-            BackColor = Surface
+            BackColor = Surface,
+            Padding = new Padding(18),
+            Margin = new Padding(0, 0, 0, 10)
         };
-        form.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 190));
-        form.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-        form.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 120));
 
-        StyleTextBox(_genres);
-        StyleNumeric(_poll);
-        StyleNumeric(_lookback);
-        StyleTextBox(_downloadDir);
-        StyleCheck(_autoDownload);
+        card.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 190));
+        card.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        card.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130));
 
-        AddSettingRow(form, 0, "Жанры", _genres, null);
-        AddSettingRow(form, 1, "Проверять каждые", _poll, "мин");
-        AddSettingRow(form, 2, "Искать за последние", _lookback, "часов");
-        AddSettingRow(form, 3, "Папка загрузки", _downloadDir, null);
+        card.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
+        card.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
+        card.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
+        card.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
+        card.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
+        card.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
+        card.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+
+        card.Controls.Add(new Label
+        {
+            Dock = DockStyle.Fill,
+            Text = "Мониторинг",
+            TextAlign = ContentAlignment.MiddleLeft,
+            ForeColor = TextPrimary,
+            Font = new Font("Segoe UI Semibold", 11)
+        }, 0, 0);
+        card.SetColumnSpan(card.GetControlFromPosition(0, 0)!, 3);
+
+        AddSettingRow(card, 1, "Жанры", _genres, "");
+        AddSettingRow(card, 2, "Проверять каждые", _poll, "мин");
+        AddSettingRow(card, 3, "Искать за последние", _lookback, "часов");
+        AddSettingRow(card, 4, "Папка загрузки", _downloadDir, "");
 
         var browse = ActionButton("Выбрать…", false, (_, _) =>
         {
             using var dlg = new FolderBrowserDialog { SelectedPath = _downloadDir.Text };
             if (dlg.ShowDialog(this) == DialogResult.OK) _downloadDir.Text = dlg.SelectedPath;
         });
-        browse.Dock = DockStyle.Fill;
-        browse.Margin = new Padding(8, 4, 0, 4);
-        form.Controls.Add(browse, 2, 3);
+        card.Controls.Add(browse, 2, 4);
 
-        form.Controls.Add(_autoDownload, 1, 4);
-        form.SetColumnSpan(_autoDownload, 2);
+        StyleCheck(_autoDownload);
+        _autoDownload.Dock = DockStyle.Fill;
+        _autoDownload.Margin = new Padding(0);
+        card.Controls.Add(_autoDownload, 1, 5);
+        card.SetColumnSpan(_autoDownload, 2);
 
         var save = ActionButton("Сохранить настройки", true, (_, _) => SaveSettings());
-        save.Location = new Point(22, 300);
-        save.Width = 180;
+        save.Dock = DockStyle.Right;
+        card.Controls.Add(save, 2, 6);
 
-        card.Controls.Add(form);
-        card.Controls.Add(save);
         return card;
     }
 
-    private void AddSettingRow(TableLayoutPanel form, int row, string label, Control control, string? suffix)
+    private void AddSettingRow(TableLayoutPanel table, int row, string label, Control control, string suffix)
     {
-        form.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
-        var l = new Label
+        table.Controls.Add(new Label
         {
+            Dock = DockStyle.Fill,
             Text = label,
-            AutoSize = true,
-            ForeColor = TextMuted,
-            Anchor = AnchorStyles.Left,
-            Margin = new Padding(0, 0, 12, 0)
-        };
-        control.Dock = DockStyle.Fill;
-        control.Margin = new Padding(0, 4, 8, 4);
+            TextAlign = ContentAlignment.MiddleLeft,
+            ForeColor = TextSecondary
+        }, 0, row);
 
-        form.Controls.Add(l, 0, row);
-        form.Controls.Add(control, 1, row);
+        if (control is TextBox tb) StyleTextBox(tb);
+        if (control is NumericUpDown nud) StyleNumeric(nud);
+
+        control.Dock = DockStyle.Fill;
+        control.Margin = new Padding(0, 6, 10, 6);
+        table.Controls.Add(control, 1, row);
 
         if (!string.IsNullOrWhiteSpace(suffix))
         {
-            form.Controls.Add(new Label
+            table.Controls.Add(new Label
             {
+                Dock = DockStyle.Fill,
                 Text = suffix,
-                AutoSize = true,
-                ForeColor = TextMuted,
-                Anchor = AnchorStyles.Left
+                TextAlign = ContentAlignment.MiddleLeft,
+                ForeColor = TextSecondary
             }, 2, row);
         }
     }
@@ -674,123 +726,47 @@ public sealed class MainForm : Form
         var footer = new Panel
         {
             Dock = DockStyle.Fill,
-            BackColor = Surface,
-            Padding = new Padding(22, 8, 22, 6)
+            BackColor = NavBg,
+            Padding = new Padding(22, 0, 22, 0)
         };
-        _status.Location = new Point(22, 9);
         footer.Controls.Add(_status);
         return footer;
     }
 
-    private Panel PageHeading(string titleText, string subtitleText)
+    private Button ActionButton(string text, bool primary, EventHandler handler)
     {
-        var p = new Panel { Dock = DockStyle.Fill, BackColor = Bg };
-        var title = new Label
-        {
-            Text = titleText,
-            AutoSize = true,
-            ForeColor = TextPrimary,
-            Font = new Font("Segoe UI Semibold", 18, FontStyle.Bold),
-            Location = new Point(2, 4)
-        };
-        var subtitle = new Label
-        {
-            Text = subtitleText,
-            AutoSize = true,
-            ForeColor = TextMuted,
-            Font = new Font("Segoe UI", 9),
-            Location = new Point(4, 42)
-        };
-        p.Controls.Add(title);
-        p.Controls.Add(subtitle);
-        return p;
-    }
-
-    private Panel Card(int width = 0, int height = 0)
-    {
-        var p = new Panel
-        {
-            BackColor = Surface,
-            BorderStyle = BorderStyle.FixedSingle
-        };
-        if (width > 0) p.Width = width;
-        if (height > 0) p.Height = height;
-        return p;
-    }
-
-    private Label CardTitle(string text, int x, int y) => new()
-    {
-        Text = text,
-        AutoSize = true,
-        ForeColor = TextPrimary,
-        Font = new Font("Segoe UI Semibold", 12, FontStyle.Bold),
-        Location = new Point(x, y)
-    };
-
-    private Control EditorCard(string title, string subtitle, TextBox editor)
-    {
-        var card = Card();
-        card.Dock = DockStyle.Fill;
-        card.Margin = new Padding(0, 0, 12, 0);
-        card.Padding = new Padding(18);
-
-        var root = new TableLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            RowCount = 3,
-            BackColor = Surface
-        };
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 30));
-        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 28));
-        root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-
-        root.Controls.Add(new Label
-        {
-            Text = title,
-            AutoSize = true,
-            ForeColor = TextPrimary,
-            Font = new Font("Segoe UI Semibold", 11, FontStyle.Bold)
-        }, 0, 0);
-        root.Controls.Add(new Label
-        {
-            Text = subtitle,
-            AutoSize = true,
-            ForeColor = TextMuted,
-            Font = new Font("Segoe UI", 8.5f)
-        }, 0, 1);
-        root.Controls.Add(editor, 0, 2);
-        card.Controls.Add(root);
-        return card;
-    }
-
-    private Button ActionButton(string text, bool primary, EventHandler click)
-    {
-        var b = new Button { Text = text, AutoSize = false };
-        StyleActionButton(b, primary);
-        b.Click += click;
+        var b = new Button { Text = text, Dock = DockStyle.Fill };
+        StyleButton(b, primary);
+        b.Click += handler;
         return b;
     }
 
-    private void StyleActionButton(Button b, bool primary)
+    private void StyleButton(Button b, bool primary)
     {
-        b.Height = 38;
-        b.Width = Math.Max(112, TextRenderer.MeasureText(b.Text, new Font("Segoe UI Semibold", 9.5f)).Width + 30);
         b.FlatStyle = FlatStyle.Flat;
         b.FlatAppearance.BorderSize = primary ? 0 : 1;
         b.FlatAppearance.BorderColor = Border;
-        b.BackColor = primary ? Accent : Surface2;
+        b.BackColor = primary ? Accent : SurfaceAlt;
         b.ForeColor = TextPrimary;
         b.Font = new Font("Segoe UI Semibold", 9.5f);
         b.Cursor = Cursors.Hand;
-        b.Margin = new Padding(0, 0, 8, 0);
+        b.Margin = new Padding(0, 5, 8, 5);
 
-        b.MouseEnter += (_, _) => b.BackColor = primary ? AccentHover : Color.FromArgb(38, 43, 54);
-        b.MouseLeave += (_, _) => b.BackColor = primary ? Accent : Surface2;
+        b.MouseEnter += (_, _) => b.BackColor = primary ? AccentHover : Color.FromArgb(41, 47, 57);
+        b.MouseLeave += (_, _) => b.BackColor = primary ? Accent : SurfaceAlt;
     }
 
     private void StyleTextBox(TextBox box)
     {
-        box.BackColor = Surface2;
+        box.BackColor = SurfaceAlt;
+        box.ForeColor = TextPrimary;
+        box.BorderStyle = BorderStyle.FixedSingle;
+        box.Font = new Font("Segoe UI", 9.5f);
+    }
+
+    private void StyleNumeric(NumericUpDown box)
+    {
+        box.BackColor = SurfaceAlt;
         box.ForeColor = TextPrimary;
         box.BorderStyle = BorderStyle.FixedSingle;
         box.Font = new Font("Segoe UI", 9.5f);
@@ -798,19 +774,10 @@ public sealed class MainForm : Form
 
     private void StyleEditor(TextBox box)
     {
-        box.BackColor = Surface2;
+        box.BackColor = SurfaceAlt;
         box.ForeColor = TextPrimary;
+        box.BorderStyle = BorderStyle.FixedSingle;
         box.Font = new Font("Segoe UI", 10);
-        box.BorderStyle = BorderStyle.FixedSingle;
-        box.Padding = new Padding(8);
-    }
-
-    private void StyleNumeric(NumericUpDown box)
-    {
-        box.BackColor = Surface2;
-        box.ForeColor = TextPrimary;
-        box.BorderStyle = BorderStyle.FixedSingle;
-        box.Font = new Font("Segoe UI", 9.5f);
     }
 
     private void StyleCheck(CheckBox box)
@@ -818,7 +785,7 @@ public sealed class MainForm : Form
         box.ForeColor = TextPrimary;
         box.BackColor = Color.Transparent;
         box.Font = new Font("Segoe UI", 9);
-        box.Margin = new Padding(10, 10, 8, 0);
+        box.Margin = Padding.Empty;
     }
 
     private void LoadSettings()
@@ -864,6 +831,7 @@ public sealed class MainForm : Form
         try
         {
             SetStatus("Подключаю SoundCloud…");
+
             var result = await SoundCloudAutoSetup.RunAsync(
                 status => BeginInvoke(() => SetStatus(status)),
                 CancellationToken.None);
@@ -873,19 +841,14 @@ public sealed class MainForm : Form
             _cfg.ClientId = result.ClientId;
             _cfg.Save();
 
-            SetStatus("SoundCloud подключён • проверяю API…");
             var client = new SoundCloudApiClient(result.ClientId, result.ClientSecret);
+            SetStatus("Проверяю API…");
             await client.TestAsync(CancellationToken.None);
 
             UpdateConnectionBadge(true);
             SetStatus("SoundCloud подключён");
-
-            MessageBox.Show(
-                this,
-                "SoundCloud подключён. Client Secret сохранён в Windows Credential Manager.",
-                "Готово",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information);
+            MessageBox.Show(this, "SoundCloud подключён успешно.", "Готово",
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         catch (OperationCanceledException)
         {
@@ -907,7 +870,8 @@ public sealed class MainForm : Form
             await client.TestAsync(CancellationToken.None);
             UpdateConnectionBadge(true);
             SetStatus("API подключён");
-            MessageBox.Show(this, "API подключён успешно.", "SoundCloud", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(this, "API подключён успешно.", "SoundCloud",
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         catch (Exception ex)
         {
@@ -927,9 +891,8 @@ public sealed class MainForm : Form
             var secret = CredentialStore.ReadSecret();
             if (string.IsNullOrWhiteSpace(_cfg.ClientId) || string.IsNullOrWhiteSpace(secret))
             {
-                MessageBox.Show(
-                    this,
-                    "Откройте «Настройки» и нажмите «Подключить SoundCloud».",
+                MessageBox.Show(this,
+                    "Откройте «Настройки» и нажмите «Подключить».",
                     "SoundCloud API",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);
@@ -949,12 +912,7 @@ public sealed class MainForm : Form
                 _cfg.GenreBpmRules.TryGetValue(genre, out var rule);
 
                 var tracks = await client.SearchTracksAsync(
-                    genre,
-                    from,
-                    rule?.From,
-                    rule?.To,
-                    100,
-                    CancellationToken.None);
+                    genre, from, rule?.From, rule?.To, 100, CancellationToken.None);
 
                 foreach (var track in tracks)
                 {
@@ -970,10 +928,7 @@ public sealed class MainForm : Form
                             try
                             {
                                 var path = await client.DownloadTrackAsync(
-                                    track,
-                                    _cfg.DownloadDir,
-                                    CancellationToken.None);
-
+                                    track, _cfg.DownloadDir, CancellationToken.None);
                                 _store.MarkDownloaded(track.Urn, path);
                                 downloaded++;
                             }
@@ -1009,7 +964,7 @@ public sealed class MainForm : Form
             var client = ClientFromUi();
             var path = await client.DownloadPreviewAsync(track, CancellationToken.None);
             _player.Play(path);
-            SetStatus($"Preview • {track.Artist} — {track.Title}");
+            SetStatus($"Preview: {track.Artist} — {track.Title}");
         }
         catch (Exception ex)
         {
@@ -1024,23 +979,15 @@ public sealed class MainForm : Form
 
         try
         {
-            var client = ClientFromUi();
             SetStatus("Скачиваю…");
-
+            var client = ClientFromUi();
             var path = await client.DownloadTrackAsync(
-                track,
-                _downloadDir.Text.Trim(),
-                CancellationToken.None);
-
+                track, _downloadDir.Text.Trim(), CancellationToken.None);
             _store.MarkDownloaded(track.Urn, path);
-            SetStatus("Трек скачан");
 
-            MessageBox.Show(
-                this,
-                $"Сохранено:\n{path}",
-                "Готово",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information);
+            SetStatus("Трек скачан");
+            MessageBox.Show(this, $"Сохранено:\n{path}", "Готово",
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         catch (Exception ex)
         {
@@ -1064,7 +1011,7 @@ public sealed class MainForm : Form
         _timer.Enabled = !_timer.Enabled;
         _timer.Interval = (int)_poll.Value * 60 * 1000;
 
-        _monitorButton.Text = _timer.Enabled ? "■  Остановить мониторинг" : "▶  Мониторинг";
+        _monitorButton.Text = _timer.Enabled ? "Остановить" : "Мониторинг";
         SetStatus(_timer.Enabled ? "Мониторинг включён" : "Мониторинг выключен");
 
         if (_timer.Enabled)
@@ -1085,16 +1032,14 @@ public sealed class MainForm : Form
         }
 
         if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(secret))
-            throw new InvalidOperationException(
-                "Откройте «Настройки» и нажмите «Подключить SoundCloud».");
+            throw new InvalidOperationException("Сначала подключите SoundCloud в настройках.");
 
         return new SoundCloudApiClient(id, secret);
     }
 
     private void DeleteSecret()
     {
-        if (MessageBox.Show(
-                this,
+        if (MessageBox.Show(this,
                 "Отключить SoundCloud и удалить сохранённый Client Secret?",
                 "Подтверждение",
                 MessageBoxButtons.YesNo,
@@ -1127,10 +1072,12 @@ public sealed class MainForm : Form
             : "●  SoundCloud не подключён";
         _connectionBadge.ForeColor = isConnected ? Success : Danger;
 
-        if (_loginStatusProxy is not null)
+        if (_settingsConnectionStatus is not null)
         {
-            _loginStatusProxy.Text = isConnected ? "●  Подключено" : "●  Не подключено";
-            _loginStatusProxy.ForeColor = isConnected ? Success : Danger;
+            _settingsConnectionStatus.Text = isConnected
+                ? "Подключено. Client Secret хранится в Windows Credential Manager."
+                : "Не подключено.";
+            _settingsConnectionStatus.ForeColor = isConnected ? Success : TextSecondary;
         }
     }
 
@@ -1169,33 +1116,27 @@ public sealed class MainForm : Form
     private TrackEntry? SelectedTrack() =>
         _grid.CurrentRow?.DataBoundItem as TrackEntry;
 
-    private void SetStatus(string text)
-    {
+    private void SetStatus(string text) =>
         _status.Text = text;
-    }
 
     private void ShowError(string message)
     {
-        SetStatus("Ошибка: " + (message.Length > 110 ? message[..110] + "…" : message));
-        MessageBox.Show(this, message, "Release Radar", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        SetStatus("Ошибка: " + (message.Length > 100 ? message[..100] + "…" : message));
+        MessageBox.Show(this, message, "Release Radar",
+            MessageBoxButtons.OK, MessageBoxIcon.Error);
     }
 
     private static bool Contains(IEnumerable<string> list, string value) =>
         list.Any(x => string.Equals(
-            x.Trim(),
-            value.Trim(),
-            StringComparison.OrdinalIgnoreCase));
+            x.Trim(), value.Trim(), StringComparison.OrdinalIgnoreCase));
 
     private static List<string> Csv(string value) =>
-        value.Split(
-                ',',
-                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
     private static List<string> Lines(string value) =>
-        value.Split(
-                new[] { "\r\n", "\n" },
+        value.Split(new[] { "\r\n", "\n" },
                 StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -1210,9 +1151,7 @@ public sealed class MainForm : Form
             if (eq <= 0) continue;
 
             var genre = line[..eq].Trim();
-            var parts = line[(eq + 1)..]
-                .Split('-', 2, StringSplitOptions.TrimEntries);
-
+            var parts = line[(eq + 1)..].Split('-', 2, StringSplitOptions.TrimEntries);
             if (parts.Length != 2) continue;
 
             int? from = int.TryParse(parts[0], out var a) ? a : null;
@@ -1221,11 +1160,7 @@ public sealed class MainForm : Form
             if (from.HasValue && to.HasValue && from > to)
                 (from, to) = (to, from);
 
-            result[genre] = new BpmRule
-            {
-                From = from,
-                To = to
-            };
+            result[genre] = new BpmRule { From = from, To = to };
         }
 
         return result;
