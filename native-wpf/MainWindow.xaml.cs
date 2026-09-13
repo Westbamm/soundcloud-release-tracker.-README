@@ -100,6 +100,26 @@ public partial class MainWindow : Window
         SearchBox.Focus();
     }
 
+    private void ClearTracks_Click(object sender, RoutedEventArgs e)
+    {
+        if (MessageBox.Show(
+                this,
+                "Очистить весь локальный список найденных треков?\n\n" +
+                "Скачанные музыкальные файлы, настройки, любимые артисты и blacklist удалены не будут.",
+                "Очистить список",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            return;
+
+        _player.Stop();
+        _store.Clear();
+        SearchBox.Clear();
+        OnlyFavoritesCheck.IsChecked = false;
+        OnlyDownloadCheck.IsChecked = false;
+        RefreshGrid();
+        SetStatus("Список найденных треков очищен");
+    }
+
     private async void Connect_Click(object sender, RoutedEventArgs e)
     {
         try
