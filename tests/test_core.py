@@ -1,3 +1,4 @@
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -14,6 +15,7 @@ from rules import (
     unique_artists,
 )
 from soundcloud_client import SoundCloudClient, safe_filename, track_urn
+import config_store
 
 
 class CoreTests(unittest.TestCase):
@@ -75,6 +77,27 @@ class CoreTests(unittest.TestCase):
         client = FakeClient("id", "secret")
         url = client.get_preview_url({"urn": "soundcloud:tracks:1"})
         self.assertEqual(url, "https://example.test/preview.mp3")
+
+    def test_client_secret_is_never_written_to_config(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            app_dir = Path(tmp)
+            config_path = app_dir / "config.json"
+            old_app_dir, old_config_path = config_store.APP_DIR, config_store.CONFIG_PATH
+            try:
+                config_store.APP_DIR = app_dir
+                config_store.CONFIG_PATH = config_path
+                config_store.save_config({
+                    "client_id": "public-id",
+                    "client_secret": "SUPER-SECRET-VALUE",
+                    "genres": ["House"],
+                })
+                payload = json.loads(config_path.read_text(encoding="utf-8"))
+                self.assertEqual(payload.get("client_id"), "public-id")
+                self.assertNotIn("client_secret", payload)
+                self.assertNotIn("SUPER-SECRET-VALUE", config_path.read_text(encoding="utf-8"))
+            finally:
+                config_store.APP_DIR = old_app_dir
+                config_store.CONFIG_PATH = old_config_path
 
 
 if __name__ == "__main__":
