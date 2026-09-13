@@ -1,7 +1,7 @@
 <Window x:Class="SoundCloudReleaseTracker.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Release Radar v7.5"
+        Title="Release Radar v7.6"
         Width="1440" Height="900"
         MinWidth="1120" MinHeight="720"
         WindowStartupLocation="CenterScreen"
@@ -250,7 +250,7 @@
             </Grid.ColumnDefinitions>
             <StackPanel VerticalAlignment="Center">
                 <TextBlock Text="Release Radar" FontSize="29" FontWeight="SemiBold"/>
-                <TextBlock Text="SoundCloud release tracker  •  v7.5"
+                <TextBlock Text="SoundCloud release tracker  •  v7.6"
                            Foreground="{StaticResource Muted}"
                            FontSize="12"
                            Margin="1,2,0,0"/>
@@ -375,10 +375,10 @@
                                     <ColumnDefinition Width="120"/>
                                     <ColumnDefinition Width="10"/>
                                     <ColumnDefinition Width="136"/>
+                                    <ColumnDefinition Width="18"/>
                                     <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="132"/>
                                     <ColumnDefinition Width="10"/>
-                                    <ColumnDefinition Width="360"/>
+                                    <ColumnDefinition Width="132"/>
                                 </Grid.ColumnDefinitions>
 
                                 <TextBlock Text="Фильтры"
@@ -400,12 +400,7 @@
                                               Style="{StaticResource FilterToggle}"
                                               Checked="FilterChanged" Unchecked="FilterChanged"/>
 
-                                <Button Grid.Column="6"
-                                        Content="Очистить список"
-                                        Style="{StaticResource DangerButton}"
-                                        Click="ClearTracks_Click"/>
-
-                                <Grid Grid.Column="8">
+                                <Grid Grid.Column="6" MinWidth="250">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="42"/>
@@ -431,6 +426,11 @@
                                             Style="{StaticResource SecondaryButton}"
                                             Click="ClearSearch_Click"/>
                                 </Grid>
+
+                                <Button Grid.Column="8"
+                                        Content="Очистить список"
+                                        Style="{StaticResource DangerButton}"
+                                        Click="ClearTracks_Click"/>
                             </Grid>
                         </Grid>
                     </Border>
@@ -563,7 +563,7 @@
                 <Grid x:Name="SettingsPage" Visibility="Collapsed">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="72"/>
-                        <RowDefinition Height="176"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="16"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
@@ -579,40 +579,64 @@
                             BorderBrush="{StaticResource Border}"
                             BorderThickness="1"
                             CornerRadius="10"
-                            Padding="20">
+                            Padding="20"
+                            MinHeight="186">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="30"/>
-                                <RowDefinition Height="28"/>
+                                <RowDefinition Height="30"/>
                                 <RowDefinition Height="48"/>
-                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="44"/>
                             </Grid.RowDefinitions>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="138"/>
+                                <ColumnDefinition Width="132"/>
                                 <ColumnDefinition Width="12"/>
                                 <ColumnDefinition Width="128"/>
+                                <ColumnDefinition Width="12"/>
+                                <ColumnDefinition Width="110"/>
                             </Grid.ColumnDefinitions>
 
-                            <TextBlock Text="Подключение SoundCloud" FontSize="17" FontWeight="SemiBold"
-                                       Grid.ColumnSpan="4"/>
-                            <TextBlock x:Name="SettingsConnectionText" Grid.Row="1"
-                                       Foreground="{StaticResource Muted}" Grid.ColumnSpan="4"/>
+                            <TextBlock Text="Подключение SoundCloud"
+                                       FontSize="17"
+                                       FontWeight="SemiBold"
+                                       Grid.ColumnSpan="6"/>
 
-                            <TextBox x:Name="ClientIdBox" Grid.Row="2" IsReadOnly="True"
+                            <TextBlock x:Name="SettingsConnectionText"
+                                       Grid.Row="1"
+                                       Foreground="{StaticResource Muted}"
+                                       Grid.ColumnSpan="6"/>
+
+                            <TextBox x:Name="ClientIdBox"
+                                     Grid.Row="2"
+                                     IsReadOnly="True"
                                      Margin="0,4,12,4"/>
-                            <Button Grid.Row="2" Grid.Column="1" Content="Подключить"
-                                    Style="{StaticResource PrimaryButton}" Click="Connect_Click"/>
-                            <Button Grid.Row="2" Grid.Column="3" Content="Проверить API"
-                                    Style="{StaticResource SecondaryButton}" Click="TestApi_Click"/>
 
-                            <TextBlock Grid.Row="3" Grid.ColumnSpan="3"
+                            <Button Grid.Row="2"
+                                    Grid.Column="1"
+                                    Content="Подключить"
+                                    Style="{StaticResource PrimaryButton}"
+                                    Click="Connect_Click"/>
+
+                            <Button Grid.Row="2"
+                                    Grid.Column="3"
+                                    Content="Проверить API"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Click="TestApi_Click"/>
+
+                            <Button Grid.Row="2"
+                                    Grid.Column="5"
+                                    Content="Отключить"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Click="Disconnect_Click"/>
+
+                            <TextBlock Grid.Row="3"
+                                       Grid.ColumnSpan="6"
                                        Text="Пароль вводится только на официальном сайте. Client Secret хранится в Windows Credential Manager."
                                        Foreground="{StaticResource Muted}"
                                        FontSize="12"
+                                       TextWrapping="Wrap"
                                        VerticalAlignment="Center"/>
-                            <Button Grid.Row="3" Grid.Column="3" Content="Отключить"
-                                    Style="{StaticResource SecondaryButton}" Click="Disconnect_Click"/>
                         </Grid>
                     </Border>
 
