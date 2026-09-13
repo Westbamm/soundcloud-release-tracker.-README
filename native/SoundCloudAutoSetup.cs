@@ -25,7 +25,7 @@ internal static class SoundCloudAutoSetup
         status?.Invoke("Загружаю официальный helper SoundCloud…");
 
         using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
-        http.DefaultRequestHeaders.UserAgent.ParseAdd("SoundCloudReleaseTracker/5.2");
+        http.DefaultRequestHeaders.UserAgent.ParseAdd("SoundCloudReleaseTracker/5.4");
         var scriptBytes = await http.GetByteArrayAsync(ScriptUrl, ct);
 
         var actualBlobSha = ComputeGitBlobSha1(scriptBytes);
@@ -50,8 +50,9 @@ internal static class SoundCloudAutoSetup
         };
         psi.ArgumentList.Add(scriptPath);
         psi.ArgumentList.Add("--remote");
+        var appName = "Music Monitor " + Convert.ToHexString(RandomNumberGenerator.GetBytes(4));
         psi.ArgumentList.Add("--name");
-        psi.ArgumentList.Add("SoundCloud Release Tracker");
+        psi.ArgumentList.Add(appName);
         psi.ArgumentList.Add("--description");
         psi.ArgumentList.Add("Personal desktop app for discovering public SoundCloud tracks by genre and BPM");
         psi.ArgumentList.Add("--website");
@@ -125,6 +126,10 @@ internal static class SoundCloudAutoSetup
         if (text.Contains("application_creation_not_available", StringComparison.OrdinalIgnoreCase) ||
             text.Contains("Artist Pro", StringComparison.OrdinalIgnoreCase))
             return "SoundCloud не разрешил создать API-приложение для этого аккаунта. Для регистрации сейчас нужен Artist Pro.";
+
+        if (text.Contains("application_name_not_allowed", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("application name is not allowed", StringComparison.OrdinalIgnoreCase))
+            return "SoundCloud отклонил имя API-приложения. Попробуйте подключение ещё раз — приложение создаст новое нейтральное имя.";
 
         if (text.Length > 700) text = text[..700] + "…";
         return text;
