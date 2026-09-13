@@ -19,6 +19,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Assets/node.exe" LogicalName="ReleaseRadar.NodeRuntime" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Include="../native/Models.cs" Link="Core/Models.cs" />
     <Compile Include="../native/AppConfig.cs" Link="Core/AppConfig.cs" />
     <Compile Include="../native/CredentialStore.cs" Link="Core/CredentialStore.cs" />
