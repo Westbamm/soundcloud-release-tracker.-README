@@ -30,6 +30,14 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Stage embedded Node runtime
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path 'native-wpf/Assets' | Out-Null
+          $node = (Get-Command node).Source
+          Copy-Item $node 'native-wpf/Assets/node.exe' -Force
+          Write-Host "Embedding Node runtime from: $node"
+
       - name: Build WPF
         shell: pwsh
         run: dotnet build native-wpf/ReleaseRadar.Wpf.csproj -c Release
@@ -41,16 +49,11 @@ jobs:
           -c Release
           -r win-x64
           --self-contained true
-          -p:PublishSingleFile=false
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
           -p:DebugType=None
           -o publish/release-radar-wpf
-
-      - name: Bundle Node runtime
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path 'publish/release-radar-wpf/tools' | Out-Null
-          $node = (Get-Command node).Source
-          Copy-Item $node 'publish/release-radar-wpf/tools/node.exe' -Force
 
       - name: Verify package
         shell: pwsh
@@ -58,23 +61,26 @@ jobs:
           if (-not (Test-Path 'publish/release-radar-wpf/ReleaseRadar.exe')) {
             throw 'ReleaseRadar.exe was not created.'
           }
-          if (-not (Test-Path 'publish/release-radar-wpf/tools/node.exe')) {
-            throw 'Bundled Node runtime was not created.'
-          }
           if (Test-Path 'publish/release-radar-wpf/python*.dll') {
             throw 'Unexpected Python runtime found.'
+          }
+          $files = Get-ChildItem 'publish/release-radar-wpf' -File
+          if ($files.Count -ne 1 -or $files[0].Name -ne 'ReleaseRadar.exe') {
+            Write-Host "Unexpected publish contents:"
+            $files | Format-Table Name,Length
+            throw 'Publish output must contain exactly one ReleaseRadar.exe file.'
           }
           Get-Item 'publish/release-radar-wpf/ReleaseRadar.exe' | Format-List Name,Length,LastWriteTime
 
       - name: Create ZIP
         shell: pwsh
         run: |
-          Compress-Archive -Path 'publish/release-radar-wpf/*' -DestinationPath 'ReleaseRadar-v7.1-WPF-Windows-x64.zip' -Force
+          Compress-Archive -Path 'publish/release-radar-wpf/*' -DestinationPath 'ReleaseRadar-v7.2-Single-EXE-Windows-x64.zip' -Force
 
       - name: Upload WPF app
         uses: actions/upload-artifact@v4
         with:
-          name: ReleaseRadar-v7.1-WPF-Windows-x64
-          path: ReleaseRadar-v7.1-WPF-Windows-x64.zip
+          name: ReleaseRadar-v7.2-Single-EXE-Windows-x64
+          path: ReleaseRadar-v7.2-Single-EXE-Windows-x64.zip
           if-no-files-found: error
           retention-days: 30
