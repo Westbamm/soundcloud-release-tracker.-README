@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main ]
     paths:
-      - 'twintrack-winui.b64'
+      - 'twintrack-winui-src/**'
       - '.github/workflows/build-twintrack-winui3.yml'
   workflow_dispatch:
 
@@ -23,33 +23,14 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Fetch exact source blob
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          $json = (gh api repos/${env:GITHUB_REPOSITORY}/git/blobs/d1fd65f2cbd2406496aa9347f3060ca73bf10e97 | Out-String | ConvertFrom-Json)
-          $b64 = ($json.content -replace '\s','')
-          [IO.File]::WriteAllBytes('twintrack-winui.zip',[Convert]::FromBase64String($b64))
-          Expand-Archive -Path 'twintrack-winui.zip' -DestinationPath '.' -Force
-          if (-not (Test-Path 'TwinTrack/TwinTrack.csproj')) { throw 'TwinTrack.csproj missing after extract' }
-
-      - name: Pin Windows App SDK
-        shell: pwsh
-        run: |
-          $p='TwinTrack/TwinTrack.csproj'
-          $s=Get-Content $p -Raw
-          $s=$s -replace '1\.8\.260921001','1.8.260317003'
-          Set-Content $p $s -Encoding UTF8
-
       - name: Restore
         shell: pwsh
-        run: dotnet restore .\TwinTrack\TwinTrack.csproj -r win-x64
+        run: dotnet restore .\twintrack-winui-src\TwinTrack\TwinTrack.csproj -r win-x64
 
       - name: Publish self-contained x64
         shell: pwsh
         run: >
-          dotnet publish .\TwinTrack\TwinTrack.csproj
+          dotnet publish .\twintrack-winui-src\TwinTrack\TwinTrack.csproj
           -c Release
           -r win-x64
           --self-contained true
@@ -62,6 +43,7 @@ jobs:
         shell: pwsh
         run: |
           if (-not (Test-Path '.\publish\TWINTRACK.exe')) {
+            Write-Host 'Publish contents:'
             Get-ChildItem '.\publish' -Recurse | Format-Table FullName,Length
             throw 'TWINTRACK.exe was not created.'
           }
