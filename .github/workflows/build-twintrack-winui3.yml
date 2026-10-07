@@ -52,9 +52,18 @@ jobs:
       - name: Smoke launch
         shell: pwsh
         run: |
+          $start = Get-Date
           $p = Start-Process -FilePath '.\publish\TWINTRACK.exe' -PassThru
           Start-Sleep -Seconds 5
-          if ($p.HasExited) { throw "TWINTRACK.exe exited during smoke test with code $($p.ExitCode)" }
+          if ($p.HasExited) {
+            Write-Host "TWINTRACK exited with code $($p.ExitCode)"
+            Write-Host '--- Recent Application errors ---'
+            Get-WinEvent -FilterHashtable @{LogName='Application'; StartTime=$start.AddSeconds(-2)} -ErrorAction SilentlyContinue |
+              Where-Object { $_.LevelDisplayName -in @('Error','Critical') -or $_.ProviderName -in @('Application Error','.NET Runtime','Windows Error Reporting') } |
+              Select-Object TimeCreated,ProviderName,Id,LevelDisplayName,Message |
+              Format-List
+            throw "TWINTRACK.exe exited during smoke test with code $($p.ExitCode)"
+          }
           Stop-Process -Id $p.Id -Force
           Write-Host 'TWINTRACK smoke launch PASS'
 
