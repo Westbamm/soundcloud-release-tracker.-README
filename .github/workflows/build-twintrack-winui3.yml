@@ -1,0 +1,77 @@
+name: Build TWINTRACK WinUI3 Portable
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'twintrack-winui.b64'
+      - '.github/workflows/build-twintrack-winui3.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Decode source bundle
+        shell: pwsh
+        run: |
+          $b64 = Get-Content 'twintrack-winui.b64' -Raw
+          [IO.File]::WriteAllBytes('twintrack-winui.zip',[Convert]::FromBase64String($b64))
+          Expand-Archive -Path 'twintrack-winui.zip' -DestinationPath '.' -Force
+          if (-not (Test-Path 'TwinTrack/TwinTrack.csproj')) { throw 'TwinTrack.csproj missing after extract' }
+
+      - name: Pin Windows App SDK
+        shell: pwsh
+        run: |
+          $p='TwinTrack/TwinTrack.csproj'
+          $s=Get-Content $p -Raw
+          $s=$s -replace '1\.8\.260921001','1.8.260317003'
+          Set-Content $p $s -Encoding UTF8
+
+      - name: Restore
+        shell: pwsh
+        run: dotnet restore .\TwinTrack\TwinTrack.csproj -r win-x64
+
+      - name: Publish self-contained x64
+        shell: pwsh
+        run: >
+          dotnet publish .\TwinTrack\TwinTrack.csproj
+          -c Release
+          -r win-x64
+          --self-contained true
+          -p:Platform=x64
+          -p:WindowsAppSDKSelfContained=true
+          -p:DebugType=None
+          -o .\publish
+
+      - name: Verify EXE
+        shell: pwsh
+        run: |
+          if (-not (Test-Path '.\publish\TWINTRACK.exe')) {
+            Get-ChildItem '.\publish' -Recurse | Format-Table FullName,Length
+            throw 'TWINTRACK.exe was not created.'
+          }
+          Get-Item '.\publish\TWINTRACK.exe' | Format-List Name,Length,LastWriteTime
+
+      - name: Package
+        shell: pwsh
+        run: Compress-Archive -Path '.\publish\*' -DestinationPath '.\TWINTRACK_WINUI3_X64_PORTABLE.zip' -Force
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TWINTRACK_WINUI3_X64_PORTABLE
+          path: TWINTRACK_WINUI3_X64_PORTABLE.zip
+          if-no-files-found: error
+          retention-days: 30
