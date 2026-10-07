@@ -28,9 +28,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $content = gh api repos/${env:GITHUB_REPOSITORY}/git/blobs/d1fd65f2cbd2406496aa9347f3060ca73bf10e97 --jq .content
-          $b64 = ($content -join '') -replace '\s',''
-          [IO.File]::WriteAllBytes('twintrack-winui.zip',[Convert]::FromBase64String($b64))
+          gh api repos/${env:GITHUB_REPOSITORY}/git/blobs/d1fd65f2cbd2406496aa9347f3060ca73bf10e97 -H "Accept: application/vnd.github.raw+json" > twintrack-winui.zip
+          $hash=(Get-FileHash 'twintrack-winui.zip' -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($hash -ne '048939a2e7fe262b4ac351b08dd8fdb7d83aca2bd722bee237948c1d46ccbf02') { throw "Source ZIP hash mismatch: $hash" }
           Expand-Archive -Path 'twintrack-winui.zip' -DestinationPath '.' -Force
           if (-not (Test-Path 'TwinTrack/TwinTrack.csproj')) { throw 'TwinTrack.csproj missing after extract' }
 
