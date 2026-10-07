@@ -1,0 +1,175 @@
+name: Package Full Release Radar Project
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/package-full-project.yml'
+
+jobs:
+  package:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout latest project
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Stage Windows Node runtime for source build
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path 'native-wpf/Assets' | Out-Null
+          $node = (Get-Command node).Source
+          Copy-Item $node 'native-wpf/Assets/node.exe' -Force
+          Write-Host "Bundled source-build Node runtime: $node"
+
+      - name: Build latest Release Radar v7.8
+        shell: pwsh
+        run: |
+          dotnet build native-wpf/ReleaseRadar.Wpf.csproj -c Release
+          dotnet publish native-wpf/ReleaseRadar.Wpf.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:EnableCompressionInSingleFile=true `
+            -p:DebugType=None `
+            -o publish/latest
+
+          if (-not (Test-Path 'publish/latest/ReleaseRadar.exe')) {
+            throw 'ReleaseRadar.exe was not created.'
+          }
+
+      - name: Assemble full project tree
+        shell: pwsh
+        run: |
+          $root = 'FULL_PROJECT'
+          $source = Join-Path $root 'SOURCE_CURRENT'
+          $legacy = Join-Path $root 'LEGACY_SOURCE'
+          $ready = Join-Path $root 'READY_TO_RUN'
+
+          New-Item -ItemType Directory -Force -Path $source,$legacy,$ready | Out-Null
+
+          Copy-Item 'native-wpf' (Join-Path $source 'native-wpf') -Recurse -Force
+          Copy-Item 'native' (Join-Path $source 'native') -Recurse -Force
+          Copy-Item '.github' (Join-Path $source '.github') -Recurse -Force
+          Copy-Item '.gitignore' $source -Force
+          Copy-Item 'README.md' $source -Force
+
+          $legacyFiles = @(
+            'app.py',
+            'build_standalone_windows.bat',
+            'config_store.py',
+            'credential_store.py',
+            'database.py',
+            'preview_player.py',
+            'requirements.txt',
+            'rules.py',
+            'soundcloud_client.py',
+            'source_bundle.b64',
+            'standalone.spec'
+          )
+          foreach ($f in $legacyFiles) {
+            if (Test-Path $f) { Copy-Item $f $legacy -Force }
+          }
+          if (Test-Path 'tests') { Copy-Item 'tests' (Join-Path $legacy 'tests') -Recurse -Force }
+
+          Copy-Item 'publish/latest/ReleaseRadar.exe' $ready -Force
+
+          @'
+          RELEASE RADAR v7.8 — FULL PROJECT
+
+          CURRENT APPLICATION:
+          SOURCE_CURRENT\native-wpf   — current WPF user interface
+          SOURCE_CURRENT\native       — shared C# core and earlier native files
+          SOURCE_CURRENT\.github      — GitHub Actions build workflows
+          READY_TO_RUN\ReleaseRadar.exe — ready Windows x64 self-contained build
+
+          SOURCE BUILD ASSET:
+          SOURCE_CURRENT\native-wpf\Assets\node.exe is included so the current
+          WPF project has its embedded Node runtime available at compile time.
+
+          SECURITY:
+          No SoundCloud Client Secret, access token, password, cookies, or user
+          credentials are included in this archive. Runtime credentials are stored
+          on the user's PC in Windows Credential Manager.
+
+          LEGACY_SOURCE contains the previous Python implementation and tests for
+          reference. The current application is the WPF/.NET 8 project.
+
+          To build locally, install the .NET 8 SDK and run BUILD_CURRENT.cmd.
+          The ready-to-run EXE itself requires no .NET or Node installation.
+          '@ | Set-Content (Join-Path $root 'PROJECT_INFO.txt') -Encoding UTF8
+
+          @'
+          @echo off
+          setlocal
+          cd /d "%~dp0"
+          if not exist "SOURCE_CURRENT\native-wpf\Assets\node.exe" (
+            echo ERROR: embedded Node build asset is missing.
+            pause
+            exit /b 1
+          )
+          dotnet publish "SOURCE_CURRENT\native-wpf\ReleaseRadar.Wpf.csproj" -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=None -o "LOCAL_BUILD"
+          if errorlevel 1 (
+            echo BUILD FAILED
+            pause
+            exit /b 1
+          )
+          echo.
+          echo BUILD OK: LOCAL_BUILD\ReleaseRadar.exe
+          pause
+          '@ | Set-Content (Join-Path $root 'BUILD_CURRENT.cmd') -Encoding ASCII
+
+          "Release Radar v7.8" | Set-Content (Join-Path $root 'VERSION.txt') -Encoding UTF8
+          "${{ github.sha }}" | Set-Content (Join-Path $root 'SOURCE_COMMIT.txt') -Encoding ASCII
+
+      - name: Validate full project package
+        shell: pwsh
+        run: |
+          $required = @(
+            'FULL_PROJECT/READY_TO_RUN/ReleaseRadar.exe',
+            'FULL_PROJECT/SOURCE_CURRENT/native-wpf/ReleaseRadar.Wpf.csproj',
+            'FULL_PROJECT/SOURCE_CURRENT/native-wpf/MainWindow.xaml',
+            'FULL_PROJECT/SOURCE_CURRENT/native-wpf/MainWindow.xaml.cs',
+            'FULL_PROJECT/SOURCE_CURRENT/native-wpf/Assets/node.exe',
+            'FULL_PROJECT/SOURCE_CURRENT/native/SoundCloudApiClient.cs',
+            'FULL_PROJECT/SOURCE_CURRENT/native/CredentialStore.cs',
+            'FULL_PROJECT/SOURCE_CURRENT/.github/workflows/build-wpf-windows.yml',
+            'FULL_PROJECT/BUILD_CURRENT.cmd',
+            'FULL_PROJECT/PROJECT_INFO.txt'
+          )
+          foreach ($path in $required) {
+            if (-not (Test-Path $path)) { throw "Missing required project file: $path" }
+          }
+
+          $exe = Get-Item 'FULL_PROJECT/READY_TO_RUN/ReleaseRadar.exe'
+          if ($exe.Length -lt 50000000) { throw 'ReleaseRadar.exe is unexpectedly small.' }
+
+          Get-ChildItem FULL_PROJECT -Recurse -File |
+            Select-Object FullName,Length |
+            Sort-Object FullName |
+            Format-Table -AutoSize
+
+      - name: Create full project ZIP
+        shell: pwsh
+        run: |
+          Compress-Archive -Path 'FULL_PROJECT/*' -DestinationPath 'ReleaseRadar-v7.8-FULL-PROJECT.zip' -Force
+          Get-FileHash 'ReleaseRadar-v7.8-FULL-PROJECT.zip' -Algorithm SHA256 | Format-List
+          Get-Item 'ReleaseRadar-v7.8-FULL-PROJECT.zip' | Format-List Name,Length,LastWriteTime
+
+      - name: Upload full project
+        uses: actions/upload-artifact@v4
+        with:
+          name: ReleaseRadar-v7.8-FULL-PROJECT
+          path: ReleaseRadar-v7.8-FULL-PROJECT.zip
+          if-no-files-found: error
+          retention-days: 30
