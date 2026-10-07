@@ -23,11 +23,13 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Decode source bundle
+      - name: Fetch exact source blob
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          $b64 = (Get-Content 'twintrack-winui.b64' -Raw) -replace '[^A-Za-z0-9+/=]',''
-          if (($b64.Length % 4) -ne 0) { throw "Invalid base64 length: $($b64.Length)" }
+          $content = gh api repos/${env:GITHUB_REPOSITORY}/git/blobs/d1fd65f2cbd2406496aa9347f3060ca73bf10e97 --jq .content
+          $b64 = ($content -join '') -replace '\s',''
           [IO.File]::WriteAllBytes('twintrack-winui.zip',[Convert]::FromBase64String($b64))
           Expand-Archive -Path 'twintrack-winui.zip' -DestinationPath '.' -Force
           if (-not (Test-Path 'TwinTrack/TwinTrack.csproj')) { throw 'TwinTrack.csproj missing after extract' }
