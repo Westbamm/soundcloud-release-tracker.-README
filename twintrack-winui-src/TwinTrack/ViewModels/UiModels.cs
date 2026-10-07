@@ -1,0 +1,6 @@
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
+using TwinTrack.Models;
+namespace TwinTrack.ViewModels;
+public sealed class FolderVm:INotifyPropertyChanged { public FolderModel Model{get;} public FolderVm(FolderModel m)=>Model=m; public string Id=>Model.Id; public string Name=>Model.Name; public string Path=>Model.Path; public int FileCount{get=>Model.FileCount;set{if(Model.FileCount==value)return;Model.FileCount=value;OnChanged();}} public event PropertyChangedEventHandler? PropertyChanged; public void Refresh(){OnChanged(nameof(Name));OnChanged(nameof(Path));OnChanged(nameof(FileCount));} private void OnChanged([CallerMemberName]string? n=null)=>PropertyChanged?.Invoke(this,new PropertyChangedEventArgs(n)); }
+public sealed class TrackRowVm { public required FileItem Item{get;init;} public int GroupIndex{get;init;} public string Artist=>Item.Artist; public string Title=>Item.Title; public string FileName=>Item.Name; public string SizeText=>FormatBytes(Item.Size); public string Format=>System.IO.Path.GetExtension(Item.Name).TrimStart('.').ToUpperInvariant(); public string Folder=>Item.Dir; public string FullPath=>Item.FullPath; public static string FormatBytes(long n){if(n>=1073741824)return $"{n/1073741824d:0.##} ГБ";if(n>=1048576)return $"{n/1048576d:0.0} МБ";if(n>=1024)return $"{n/1024d:0.0} КБ";return $"{n} Б";} }
