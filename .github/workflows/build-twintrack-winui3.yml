@@ -49,6 +49,15 @@ jobs:
           }
           Get-Item '.\publish\TWINTRACK.exe' | Format-List Name,Length,LastWriteTime
 
+      - name: Smoke launch
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath '.\publish\TWINTRACK.exe' -PassThru
+          Start-Sleep -Seconds 5
+          if ($p.HasExited) { throw "TWINTRACK.exe exited during smoke test with code $($p.ExitCode)" }
+          Stop-Process -Id $p.Id -Force
+          Write-Host 'TWINTRACK smoke launch PASS'
+
       - name: Package
         shell: pwsh
         run: Compress-Archive -Path '.\publish\*' -DestinationPath '.\TWINTRACK_WINUI3_X64_PORTABLE.zip' -Force
