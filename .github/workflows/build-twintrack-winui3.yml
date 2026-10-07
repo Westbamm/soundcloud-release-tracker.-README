@@ -26,7 +26,8 @@ jobs:
       - name: Decode source bundle
         shell: pwsh
         run: |
-          $b64 = Get-Content 'twintrack-winui.b64' -Raw
+          $b64 = (Get-Content 'twintrack-winui.b64' -Raw) -replace '[^A-Za-z0-9+/=]',''
+          if (($b64.Length % 4) -ne 0) { throw "Invalid base64 length: $($b64.Length)" }
           [IO.File]::WriteAllBytes('twintrack-winui.zip',[Convert]::FromBase64String($b64))
           Expand-Archive -Path 'twintrack-winui.zip' -DestinationPath '.' -Force
           if (-not (Test-Path 'TwinTrack/TwinTrack.csproj')) { throw 'TwinTrack.csproj missing after extract' }
