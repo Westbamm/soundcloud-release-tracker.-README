@@ -5,8 +5,8 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:TwinTrack"
     xmlns:vm="using:TwinTrack.ViewModels"
-    RequestedTheme="Dark" Title="TWINTRACK">
-    <Grid Background="#061A2D">
+    Title="TWINTRACK">
+    <Grid Background="#061A2D" RequestedTheme="Dark">
         <Grid.ColumnDefinitions><ColumnDefinition Width="254"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
         <Border Background="#071D31" BorderBrush="#143754" BorderThickness="0,0,1,0">
             <Grid Padding="18,22,16,18">
